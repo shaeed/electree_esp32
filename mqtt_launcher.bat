@@ -1,0 +1,6 @@
+START cmd.exe /k ""C:\Program Files (x86)\mosquitto\mosquitto.exe""
+START cmd.exe /k ""C:\Program Files (x86)\mosquitto\mosquitto_sub.exe" -h localhost -t Shaeed/status"
+START cmd.exe /k ""C:\Program Files (x86)\mosquitto\mosquitto_sub.exe" -h localhost -t Shaeed/debug"
+START cmd.exe /k ""C:\Program Files (x86)\mosquitto\mosquitto_sub.exe" -h localhost -t Shaeed/uartin"
+START cmd.exe /k ""C:\Program Files (x86)\mosquitto\mosquitto_sub.exe" -h localhost -t Shaeed/conf"
+START cmd.exe /k ""C:\Program Files (x86)\mosquitto\mosquitto_pub.exe" -h localhost -t Shaeed/relay/7/set -m 0"

@@ -1,0 +1,58 @@
+mosquitto_pub.exe -h localhost -t Shaeed/conf/set -m "{\"rcfg\":{\"m\":2}}" – Delete All
+mosquitto_pub.exe -h localhost -t Shaeed/conf/set -m "{\"rcfg\":{\"m\":1,\"g\": 23,\"t\": 1, \"bm\": 2}}"
+mosquitto_pub.exe -h localhost -t Shaeed/conf/set -m "{\"rcfg\":{\"m\":1,\"g\": 22,\"t\": 1, \"bm\": 2}}"
+mosquitto_pub.exe -h localhost -t Shaeed/conf/set -m "{\"rcfg\":{\"m\":1,\"g\": 21,\"t\": 1, \"bm\": 2}}"
+mosquitto_pub.exe -h localhost -t Shaeed/conf/set -m "{\"rcfg\":{\"m\":1,\"g\": 19,\"t\": 1, \"bm\": 2}}"
+mosquitto_pub.exe -h localhost -t Shaeed/conf/set -m "{\"rcfg\":{\"m\":1,\"g\": 18,\"t\": 1, \"bm\": 2}}"
+mosquitto_pub.exe -h localhost -t Shaeed/conf/set -m "{\"rcfg\":{\"m\":1,\"g\": 5,\"t\": 1, \"bm\": 2}}"
+mosquitto_pub.exe -h localhost -t Shaeed/conf/set -m "{\"rcfg\":{\"m\":1,\"g\": 17,\"t\": 1, \"bm\": 2}}"
+mosquitto_pub.exe -h localhost -t Shaeed/conf/set -m "{\"rcfg\":{\"m\":1,\"g\": 16,\"t\": 1, \"bm\": 2}}"
+
+mosquitto_pub.exe -h localhost -t Shaeed/conf/set -m "{\"rcfg\":{\"m\":1,\"g\": 39,\"t\": 1, \"bm\": 2}}"
+mosquitto_pub.exe -h localhost -t Shaeed/conf/set -m "{\"rcfg\":{\"m\":5,\"g\": 25,\"t\": 1, \"r\":8, \"bm\":2}}" - Update relay
+mosquitto_pub.exe -h localhost -t Shaeed/conf/set -m "{\"rcfg\":{\"m\":4,\"r\": 8}}" 
+
+mosquitto_pub.exe -h localhost -t Shaeed/relay/0/set -m 1
+mosquitto_pub.exe -h localhost -t Shaeed/relay/1/set -m 1
+mosquitto_pub.exe -h localhost -t Shaeed/relay/2/set -m 1
+mosquitto_pub.exe -h localhost -t Shaeed/relay/3/set -m 1
+mosquitto_pub.exe -h localhost -t Shaeed/relay/4/set -m 1
+mosquitto_pub.exe -h localhost -t Shaeed/relay/5/set -m 1
+mosquitto_pub.exe -h localhost -t Shaeed/relay/6/set -m 1
+mosquitto_pub.exe -h localhost -t Shaeed/relay/7/set -m 1
+
+mosquitto_pub.exe -h localhost -t Shaeed/relay/8/set -m 1
+
+mosquitto_pub.exe -h localhost -t Shaeed/relay/0/set -m 0
+mosquitto_pub.exe -h localhost -t Shaeed/relay/1/set -m 0
+mosquitto_pub.exe -h localhost -t Shaeed/relay/2/set -m 0
+mosquitto_pub.exe -h localhost -t Shaeed/relay/3/set -m 0
+mosquitto_pub.exe -h localhost -t Shaeed/relay/4/set -m 0
+mosquitto_pub.exe -h localhost -t Shaeed/relay/5/set -m 0
+mosquitto_pub.exe -h localhost -t Shaeed/relay/6/set -m 0
+mosquitto_pub.exe -h localhost -t Shaeed/relay/7/set -m 0
+
+mosquitto_pub.exe -h localhost -t Shaeed/conf/set -m "{\"bcfg\":{\"m\":2}}" – Delete All
+mosquitto_pub.exe -h localhost -t Shaeed/conf/set -m "{\"bcfg\":{\"m\":1,\"g\": 13,\"r\": 0}}"
+mosquitto_pub.exe -h localhost -t Shaeed/conf/set -m "{\"bcfg\":{\"m\":1,\"g\": 12,\"r\": 1}}"
+mosquitto_pub.exe -h localhost -t Shaeed/conf/set -m "{\"bcfg\":{\"m\":1,\"g\": 14,\"r\": 2}}"
+mosquitto_pub.exe -h localhost -t Shaeed/conf/set -m "{\"bcfg\":{\"m\":1,\"g\": 27,\"r\": 3}}"
+mosquitto_pub.exe -h localhost -t Shaeed/conf/set -m "{\"bcfg\":{\"m\":1,\"g\": 33,\"r\": 4}}"
+mosquitto_pub.exe -h localhost -t Shaeed/conf/set -m "{\"bcfg\":{\"m\":1,\"g\": 32,\"r\": 5}}"
+mosquitto_pub.exe -h localhost -t Shaeed/conf/set -m "{\"bcfg\":{\"m\":1,\"g\": 15,\"r\": 6}}"
+mosquitto_pub.exe -h localhost -t Shaeed/conf/set -m "{\"bcfg\":{\"m\":1,\"g\": 2,\"r\": 7}}"
+mosquitto_pub.exe -h localhost -t Shaeed/conf/set -m "{\"bcfg\":{\"m\":1,\"g\": 0,\"r\": 8}}"
+mosquitto_pub.exe -h localhost -t Shaeed/conf/set -m "{\"bcfg\":{\"m\":1,\"g\": 35,\"r\": 0}}"
+
+Led strip
+mosquitto_pub.exe -h localhost -t Shaeed/strpbrt/0/set -m 10  -- brightness
+mosquitto_pub.exe -h localhost -t Shaeed/strpclr/0/set -m 100  -- color
+
+mosquitto_pub.exe -h localhost -t Shaeed/strpthm/0/set -m 1  - Off
+mosquitto_pub.exe -h localhost -t Shaeed/strpthm/0/set -m 6  - Color full
+mosquitto_pub.exe -h localhost -t Shaeed/strpthm/0/set -m 5  - White
+mosquitto_pub.exe -h localhost -t Shaeed/strpthm/0/set -m 24  - Hue effect
+
+mosquitto_pub.exe -h localhost -t Shaeed/conf/set -m "{\"lcfg\":{\"m\":2}}" – Delete All
+mosquitto_pub.exe -h localhost -t Shaeed/conf/set -m "{\"lcfg\":{\"m\":1,\"g\": 33,\"leds\": 10}}"
+mosquitto_pub.exe -h localhost -t Shaeed/conf/set -m "{\"lcfg\":{\"m\":1,\"g\": 32,\"leds\": 10}}"

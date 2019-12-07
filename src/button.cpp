@@ -183,7 +183,7 @@ void buttonConfigureMqtt(const char * payload){
     case CONF_MODE_GET_SINGLE:
         btnNo = data[CONF_BUTTON_NO];
 
-        if(noOfButtons < btnNo){
+        if(noOfButtons <= btnNo){
             DEBUG_MSG_P(PSTR("[BCONF] Invalid button number.\n"));
         } else {
             //jsonDoc.clear();
@@ -201,9 +201,9 @@ void buttonConfigureMqtt(const char * payload){
         break;
 
     case CONF_MODE_UPDATE_SINGLE:
-        btnNo = data[CONF_RELAY_NO];
+        btnNo = data[CONF_BUTTON_NO];
 
-        if(noOfButtons < btnNo){
+        if(noOfButtons <= btnNo){
             DEBUG_MSG_P(PSTR("[BCONF] Invalid button number.\n"));
         } else {
             byte gpio = data[CONF_GPIO].as<int>() | 0xFF;
@@ -216,7 +216,6 @@ void buttonConfigureMqtt(const char * payload){
         break;
 
     default:
-        DEBUG_MSG_P(PSTR("[BCONF] Total buttons %d.\n"), noOfButtons);
         break;
     }
 
@@ -244,12 +243,13 @@ void buttonSetup() {
     unsigned long btnDelay = getSetting("btnDelay", BUTTON_DBLCLICK_DELAY).toInt();
     char noOfButtons = getSetting(K_NO_OF_BUTTONS, 0).toInt();
     //unsigned int actions = buttonStore(BUTTON1_PRESS, BUTTON1_CLICK, BUTTON1_DBLCLICK, BUTTON1_LNGCLICK, BUTTON1_LNGLNGCLICK, BUTTON1_TRIPLECLICK);
-    unsigned int actions = buttonStore(BUTTON_MODE_TOGGLE, BUTTON_MODE_TOGGLE, BUTTON_MODE_TOGGLE, BUTTON_MODE_TOGGLE, BUTTON_MODE_TOGGLE, BUTTON_MODE_TOGGLE);
+    unsigned int actions = buttonStore(BUTTON_MODE_NONE, BUTTON_MODE_TOGGLE, BUTTON_MODE_TOGGLE, BUTTON_MODE_TOGGLE, BUTTON_MODE_TOGGLE, BUTTON_MODE_TOGGLE);
     
     for(char i = 0; i < noOfButtons; i++) {
        _buttons.push_back( {
            new DebounceEvent(getSetting(K_BUTTON_PIN, i, GPIO_NONE).toInt(),
-                            getSetting(K_BUTTON_MODE, i, BUTTON_MODE_TOGGLE).toInt(),
+                            //getSetting(K_BUTTON_MODE, i, BUTTON_MODE_TOGGLE).toInt(),
+                            2,
                             BUTTON_DEBOUNCE_DELAY,
                             btnDelay),
            actions, 

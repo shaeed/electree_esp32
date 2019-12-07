@@ -199,7 +199,13 @@ extern AsyncMqttClient _mqtt;
 #define MQTT_TOPIC_IRIN             "irin"
 #define MQTT_TOPIC_IROUT            "irout"
 #define MQTT_TOPIC_OTA              "ota"
+
 #define MQTT_TOPIC_DEBUG            "debug"
+#define MQTT_TOPIC_LEDSTRIP_BRT     "strpbrt"
+#define MQTT_TOPIC_LEDSTRIP_THM     "strpthm"
+#define MQTT_TOPIC_LEDSTRIP_CLR     "strpclr"
+#define MQTT_TOPIC_LEDSTRIP_SPEED   "strpspd"
+
 
 // Light module
 #define MQTT_TOPIC_CHANNEL          "channel"

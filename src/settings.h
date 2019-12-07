@@ -33,6 +33,14 @@ Copyright (C) 2019 by Shaeed Khan
 #define K_BUTTON_MODE      "h"
 #define K_BUTTON_RELAY     "i"   //Relay number(0 based), not relay GPIO
 
+#define K_NO_OF_LEDSTRIPS  "j"
+#define K_LEDSTRIP_PIN     "k"
+#define K_LEDSTRIP_LEDCOUNT "l"
+#define K_LEDSTRIP_BRIGHTNESS_ALL "m"
+#define K_LEDSTRIP_SPD     "n"
+#define K_LEDSTRIP_CLR     "o"
+#define K_LEDSTRIP_THM     "p"
+
 template<typename T> String getSetting(const String& key, T defaultValue);
 template<typename T> String getSetting(const String& key, unsigned int index, T defaultValue);
 String getSetting(const String& key);

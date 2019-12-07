@@ -13,6 +13,13 @@
 //------------------------------------------------------------------------------
 // BUTTONS
 //------------------------------------------------------------------------------
+//#ifndef BUTTON_PUSHBUTTON
+#define BUTTON_PUSHBUTTON           0
+#define BUTTON_SWITCH               1
+#define BUTTON_DEFAULT_HIGH         2
+#define BUTTON_SET_PULLUP           4
+//#endif
+
 #define BUTTON_EVENT_NONE           0
 #define BUTTON_EVENT_PRESSED        1
 #define BUTTON_EVENT_RELEASED       2
@@ -35,6 +42,7 @@
 #define BUTTON_MODE_DIM_UP          10
 #define BUTTON_MODE_DIM_DOWN        11
 
+/////Note: millis() function is not working for esp32. Below time are multipled by 10.
 #ifndef BUTTON_DEBOUNCE_DELAY
 #define BUTTON_DEBOUNCE_DELAY       50          // Debounce delay (ms)
 #endif

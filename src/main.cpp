@@ -19,6 +19,7 @@ Copyright (C) 2019 by Shaeed Khan
 #include "uartmqtt.h"
 #include "button.h"
 #include "relay.h"
+#include "led2812b.h"
 
 std::vector<void (*)()> _loop_callbacks;
 std::vector<void (*)()> _reload_callbacks;
@@ -52,6 +53,7 @@ void setup() {
   mqttSetup();
   uartmqttSetup();
   buttonSetup();
+  led2812bSetup();
 }
 
 void loop() {

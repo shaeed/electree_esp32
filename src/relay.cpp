@@ -8,19 +8,10 @@ Copyright (C) 2019 by Shaeed Khan
 #include "relay.h"
 
 typedef struct {
-
-    // Configuration variables
-
     unsigned char pin;          // GPIO pin for the relay
     unsigned char type;         // RELAY_TYPE_NORMAL, RELAY_TYPE_INVERSE, RELAY_TYPE_LATCHED or RELAY_TYPE_LATCHED_INVERSE
-    //unsigned char reset_pin;    // GPIO to reset the relay if RELAY_TYPE_LATCHED
-    //unsigned long delay_on;     // Delay to turn relay ON
-    //unsigned long delay_off;    // Delay to turn relay OFF
-    //unsigned char pulse;        // RELAY_PULSE_NONE, RELAY_PULSE_OFF or RELAY_PULSE_ON
-    //unsigned long pulse_ms;     // Pulse length in millis
 
     // Status variables
-
     bool current_status;        // Holds the current (physical) status of the relay
     bool target_status;         // Holds the target status
     unsigned long fw_start;     // Flood window start time
@@ -28,15 +19,11 @@ typedef struct {
     unsigned long change_time;  // Scheduled time to change
     bool report;                // Whether to report to own topic
     bool group_report;          // Whether to report to group topic
-
-    // Helping objects
-
-    //Ticker pulseTicker;         // Holds the pulse back timer
-
 } relay_t;
+
 std::vector<relay_t> _relays;
 bool _relayRecursive = false;
-//Ticker _relaySaveTicker;
+Ticker _relaySaveTicker;
 
 // -----------------------------------------------------------------------------
 // RELAY PROVIDERS
@@ -64,11 +51,9 @@ void _relayProviderStatus(unsigned char id, bool status) {
  * @bool mode Requested mode
  */
 void _relayProcess(bool mode) {
-
     unsigned long current_time = millis();
 
     for (unsigned char id = 0; id < _relays.size(); id++) {
-
         bool target = _relays[id].target_status;
 
         // Only process the relays we have to change
@@ -91,7 +76,8 @@ void _relayProcess(bool mode) {
         if (!_relayRecursive) {
             unsigned char boot_mode = getSetting(K_RELAY_BOOT_MODE, id, RELAY_BOOT_MODE).toInt();
             bool do_commit = ((RELAY_BOOT_SAME == boot_mode) || (RELAY_BOOT_TOGGLE == boot_mode));
-            relaySave(do_commit);
+            //relaySave(do_commit);
+            _relaySaveTicker.once_ms(RELAY_SAVE_DELAY, relaySave, do_commit);
         }
 
         _relays[id].report = false;
@@ -164,23 +150,25 @@ void relaySave(bool do_commit) {
     unsigned char count = _relays.size();
     unsigned char currentRelay;
     bool save = false;
+    byte bootMode = RELAY_BOOT_OFF;
 
     for(unsigned char j = 0; j <= _relays.size() / 8; j++){
-        sizeOfCurrentBatch = _relays.size() > 8*(j+1) ? 8 : _relays.size()-8*j;
+        sizeOfCurrentBatch = _relays.size() > 8*(j+1) ? 8 : _relays.size() - 8*j;
         bit = 1;
         mask = 0;
         save = false;
 
         for (unsigned char i = 0; i < sizeOfCurrentBatch; i++) {
-            currentRelay = i + 8* j;
-            if (relayStatus(currentRelay)) {
-                save = true;
+            currentRelay = i + 8*j;
+            bootMode = getSetting(K_RELAY_BOOT_MODE, RELAY_BOOT_MODE).toInt();
+            if (relayStatus(currentRelay) &&
+                (bootMode == RELAY_BOOT_SAME || bootMode == RELAY_BOOT_TOGGLE)) {
                 mask += bit;
             }
             bit += bit;
         }
         
-        if(do_commit && save){
+        if(do_commit && getSetting(K_RELAY_STATUS_ALL, j, 0).toInt() != mask){
             setSetting(K_RELAY_STATUS_ALL, j, mask);
             DEBUG_MSG_P(PSTR("[RELAY] Setting relay mask: %d\n"), mask);
         }
@@ -222,16 +210,25 @@ void _relayBoot() {
     unsigned char mask;
     
     // Walk the relays
+    Serial.print("Relay boot" );
+    Serial.print(_relays.size());
+
     bool status;
     for(unsigned char j = 0; j <= _relays.size() / 8; j++){
-        unsigned char sizeOfCurrentBatch = _relays.size() > 8*(j+1) ? 8 : _relays.size()-8*j;
+        Serial.print(" inside ");
+        Serial.print(j);
+
+        unsigned char sizeOfCurrentBatch = _relays.size() > 8*(j+1) ? 8 : _relays.size() - 8*j;
         bit = 1;
         mask = getSetting(K_RELAY_STATUS_ALL, j, 0x00).toInt();
         DEBUG_MSG_P(PSTR("[RELAY] Retrieving mask: %d\n"), mask);
         trigger_save = false;
 
+        Serial.print(" batch size ");
+        Serial.print(sizeOfCurrentBatch);
+
         for (unsigned char i = 0; i < sizeOfCurrentBatch; i++) {
-            unsigned char currentRelay = i + 8* j;
+            unsigned char currentRelay = i + 8*j;
             unsigned char boot_mode = getSetting(K_RELAY_BOOT_MODE, currentRelay, RELAY_BOOT_MODE).toInt();
             DEBUG_MSG_P(PSTR("[RELAY] Relay #%d boot mode %d\n"), currentRelay, boot_mode);
 
@@ -265,7 +262,7 @@ void _relayBoot() {
         if (trigger_save) {
             //EEPROMr.write(EEPROM_RELAY_STATUS, mask);
             //eepromCommit();
-            setSetting(K_RELAY_BOOT_MODE, j, mask);
+            setSetting(K_RELAY_STATUS_ALL, j, mask);
         }
     }
 
@@ -277,9 +274,6 @@ void _relayConfigure() {
         if (GPIO_NONE == _relays[i].pin) continue;
 
         pinMode(_relays[i].pin, OUTPUT);
-        /*if (GPIO_NONE != _relays[i].reset_pin) {
-            pinMode(_relays[i].reset_pin, OUTPUT);
-        }*/
         if (_relays[i].type == RELAY_TYPE_INVERSE) {
             //set to high to block short opening of relay
             digitalWrite(_relays[i].pin, HIGH);
@@ -343,8 +337,10 @@ void relayConfigureMqtt(const char * payload){
         {
             byte gpio = data[CONF_GPIO].as<int>();// | 0xFF;
             byte type = data[CONF_TYPE].as<int>();// | RELAY_TYPE_INVERSE;
+            byte bootMode = data[CONF_RELAY_BOOT_MODE].as<int>();
             setSetting(K_RELAY_PIN, noOfRelays, gpio);
             setSetting(K_RELAY_TYPE, noOfRelays, type);
+            setSetting(K_RELAY_BOOT_MODE, noOfRelays, bootMode);
             setSetting(K_NO_OF_RELAYS, noOfRelays+1);  //Increase the total count of relays
             DEBUG_MSG_P(PSTR("[RCONF] Adding new relay. GPIO %d, type %d. Total now %d"),
                         gpio, type, noOfRelays+1);
@@ -369,7 +365,7 @@ void relayConfigureMqtt(const char * payload){
     case CONF_MODE_GET_SINGLE:
         relayNo = data[CONF_RELAY_NO];
 
-        if(noOfRelays < relayNo){
+        if(noOfRelays <= relayNo){
             DEBUG_MSG_P(PSTR("[RCONF] Invalid relay number.\n"));
         } else {
             //jsonDoc.clear();
@@ -380,6 +376,7 @@ void relayConfigureMqtt(const char * payload){
             rconf[JSON_CONF_RESPONCE] = true;
             rconf[CONF_GPIO] = getSetting(K_RELAY_PIN, relayNo, 0xFF);
             rconf[CONF_TYPE] = getSetting(K_RELAY_TYPE, relayNo, RELAY_TYPE_NORMAL);
+            rconf[CONF_RELAY_BOOT_MODE] = getSetting(K_RELAY_BOOT_MODE, relayNo, RELAY_BOOT_MODE);
             //uint16_t size = measureJson(doc);
 
             mqttSend(MQTT_TOPIC_CONF, jsonDoc.as<String>().c_str());
@@ -389,20 +386,21 @@ void relayConfigureMqtt(const char * payload){
     case CONF_MODE_UPDATE_SINGLE:
         relayNo = data[CONF_RELAY_NO];
 
-        if(noOfRelays < relayNo){
+        if(noOfRelays <= relayNo){
             DEBUG_MSG_P(PSTR("[RCONF] Invalid relay number.\n"));
         } else {
             byte gpio = data[CONF_GPIO].as<int>();
             byte type = data[CONF_TYPE].as<int>();
+            byte bootMode = data[CONF_RELAY_BOOT_MODE].as<int>();
             setSetting(K_RELAY_PIN, relayNo, gpio);
             setSetting(K_RELAY_TYPE, relayNo, type);
+            setSetting(K_RELAY_BOOT_MODE, relayNo, bootMode);
             DEBUG_MSG_P(PSTR("[RCONF] Updating relay %d. GPIO %d, type %d."),
                         relayNo, gpio, type);
         }
         break;
 
     default:
-        DEBUG_MSG_P(PSTR("[RCONF] Total relays %d.\n"), noOfRelays);
         break;
     }
 
@@ -473,10 +471,6 @@ void relaySetup() {
                                     //RELAY_DELAY_OFF 
                                     });
     }
-
-    //_relays.push_back((relay_t) {23, RELAY_TYPE_INVERSE});
-    //_relays.push_back((relay_t) {22, RELAY_TYPE_INVERSE});
-    //_relays.push_back((relay_t) {21, RELAY_TYPE_INVERSE});
 
     _relayConfigure();
     _relayBoot();

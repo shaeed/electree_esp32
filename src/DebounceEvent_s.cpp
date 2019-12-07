@@ -71,29 +71,24 @@ unsigned char DebounceEvent::loop() {
 
     if (digitalRead(_pin) != _status) {
 
-        // Debounce
+        // Debounce filtering
         unsigned long start = millis();
         while (millis() - start < _delay) delay(1);
-
-        if (digitalRead(_pin) != _status) {
-
+        
+        if (digitalRead(_pin) != _status) { //Switch state is now stable
             _status = !_status;
 
             if (_mode == BUTTON_SWITCH) {
-
                 event = EVENT_CHANGED;
 
             } else {
-
                 // released
                 if (_status == _defaultStatus) {
-
                     _event_length = millis() - _event_start;
                     _ready = true;
 
                 // pressed
                 } else {
-
                     event = EVENT_PRESSED;
                     _event_start = millis();
                     _event_length = 0;
@@ -104,11 +99,8 @@ unsigned char DebounceEvent::loop() {
                         ++_event_count;
                     }
                     _ready = false;
-
                 }
-
             }
-
         }
     }
 
