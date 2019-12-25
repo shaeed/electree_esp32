@@ -38,8 +38,6 @@ String getAdminPass() {
     return getSetting("adminPass", ADMIN_PASS);
 }
 
-
-
 void info() {
     DEBUG_MSG_P(PSTR("\n\n---8<-------\n\n"));
 
@@ -83,11 +81,6 @@ void nice_delay(unsigned long ms) {
     unsigned long start = millis();
     while (millis() - start < ms) delay(1);
 }
-
-// This method is called by the SDK to know where to connect the ADC
-/*int __get_adc_mode() {
-    return (int) (ADC_MODE_VALUE);
-}*/
 
 bool isNumber(const char * s) {
     unsigned char len = strlen(s);

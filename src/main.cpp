@@ -61,4 +61,7 @@ void loop() {
   for (unsigned char i = 0; i < _loop_callbacks.size(); i++) {
     (_loop_callbacks[i])();
   }
+
+  //Main loop delay to save power, will not affect the performance
+  delay(LOOP_DELAY_TIME);
 }

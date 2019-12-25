@@ -11,7 +11,6 @@ Copyright (C) 2019 by Shaeed Khan
 AsyncMqttClient _mqtt;
 
 bool _mqtt_enabled = true;
-bool _mqtt_use_json = false;
 unsigned long _mqtt_reconnect_delay = MQTT_RECONNECT_DELAY_MIN;
 unsigned long _mqtt_last_connection = 0;
 bool _mqtt_connecting = false;
@@ -19,7 +18,6 @@ unsigned char _mqtt_qos = MQTT_QOS;
 bool _mqtt_retain = MQTT_RETAIN;
 unsigned long _mqtt_keepalive = MQTT_KEEPALIVE;
 String _mqtt_topic_base;
-String _mqtt_topic_json;
 String _mqtt_setter;
 String _mqtt_getter;
 bool _mqtt_forward;
@@ -30,21 +28,13 @@ char *_mqtt_clientid;
 
 std::vector<mqtt_callback_f> _mqtt_callbacks;
 
-typedef struct {
-    unsigned char parent = 255;
-    char * topic;
-    char * message = NULL;
-} mqtt_message_t;
-std::vector<mqtt_message_t> _mqtt_queue;
-Ticker _mqtt_flush_ticker;
-
 // -----------------------------------------------------------------------------
 // Private
 // -----------------------------------------------------------------------------
 
 void _mqttConnect() {
     // Do not connect if already connected or still trying to connect
-    if (_mqtt.connected() || _mqtt_connecting) return;
+    if (isMqttConnected() || _mqtt_connecting) return;
 
     // Check reconnect interval
     if (millis() - _mqtt_last_connection < _mqtt_reconnect_delay) return;
@@ -150,8 +140,6 @@ void _mqttConfigure() {
         //_mqtt_enabled = getSetting("mqttEnabled", true).toInt() == 1;
         mqttEnabled(getSetting("mqttEnabled", true).toInt() == 1);
     }
-    _mqtt_use_json = (getSetting("mqttUseJson", MQTT_USE_JSON).toInt() == 1);
-    mqttQueueTopic(MQTT_TOPIC_JSON);
 
     _mqtt_reconnect_delay = MQTT_RECONNECT_DELAY_MIN;
 }
@@ -189,7 +177,6 @@ void _mqttOnConnect() {
     mqttUnsubscribeRaw("#");
 
     // Send connect event to subscribers
-	//"Shaeed"- To subscribe again
     for (unsigned char i = 0; i < _mqtt_callbacks.size(); i++) {
         (_mqtt_callbacks[i])(MQTT_CONNECT_EVENT, NULL, NULL);
     }
@@ -297,7 +284,7 @@ String mqttTopic(const char * magnitude, unsigned int index, bool is_set) {
 // -----------------------------------------------------------------------------
 
 void mqttSendRaw(const char * topic, const char * message, bool retain) {
-    if (_mqtt.connected()) {
+    if (isMqttConnected()) {
         unsigned int packetId = _mqtt.publish(topic, _mqtt_qos, retain, message);
         //DEBUG_MSG_P(PSTR("[MQTT] Sending %s => %s (PID %d)\n"), topic, message, packetId);
     }
@@ -308,24 +295,7 @@ void mqttSendRaw(const char * topic, const char * message) {
 }
 
 void mqttSend(const char * topic, const char * message, bool force, bool retain) {
-    bool useJson = force ? false : _mqtt_use_json;
-
-    // Equeue message
-    if (useJson) {
-
-        // Set default queue topic
-        mqttQueueTopic(MQTT_TOPIC_JSON);
-
-        // Enqueue new message
-        mqttEnqueue(topic, message);
-
-        // Reset flush timer
-        _mqtt_flush_ticker.once_ms(MQTT_USE_JSON_DELAY, mqttFlush);
-
-    // Send it right away
-    } else {
-        mqttSendRaw(mqttTopic(topic, false).c_str(), message, retain);
-    }
+    mqttSendRaw(mqttTopic(topic, false).c_str(), message, retain);
 }
 
 void mqttSend(const char * topic, const char * message, bool force) {
@@ -350,112 +320,8 @@ void mqttSend(const char * topic, unsigned int index, const char * message) {
     mqttSend(topic, index, message, false);
 }
 
-// -----------------------------------------------------------------------------
-
-unsigned char _mqttBuildTree(JsonObject& root, char parent) {
-    unsigned char count = 0;
-
-    // Add enqueued messages
-    /*for (unsigned char i=0; i<_mqtt_queue.size(); i++) {
-        mqtt_message_t element = _mqtt_queue[i];
-        if (element.parent == parent) {
-            ++count;
-            JsonObject& elements = root.createNestedObject(element.topic);
-            unsigned char num = _mqttBuildTree(elements, i);
-            if (0 == num) {
-                if (isNumber(element.message)) {
-                    double value = atof(element.message);
-                    if (value == int(value)) {
-                        root.set(element.topic, int(value));
-                    } else {
-                        root.set(element.topic, value);
-                    }
-                } else {
-                    root.set(element.topic, element.message);
-                }
-            }
-        }
-    }*/
-
-    return count;
-}
-
-void mqttFlush() {
-    if (!_mqtt.connected()) return;
-    if (_mqtt_queue.size() == 0) return;
-
-    // Build tree recursively
-    /*DynamicJsonBuffer jsonBuffer;
-    JsonObject& root = jsonBuffer.createObject();
-    _mqttBuildTree(root, 255);
-
-    #if MQTT_ENQUEUE_MAC
-        root[MQTT_TOPIC_MAC] = WiFi.macAddress();
-    #endif
-    #if MQTT_ENQUEUE_HOSTNAME
-        root[MQTT_TOPIC_HOSTNAME] = getSetting("hostname");
-    #endif
-    #if MQTT_ENQUEUE_IP
-        root[MQTT_TOPIC_IP] = getIP();
-    #endif
-
-    // Send
-    String output;
-    root.printTo(output);
-    jsonBuffer.clear();
-
-    mqttSendRaw(_mqtt_topic_json.c_str(), output.c_str(), false);
-
-    // Clear queue
-    for (unsigned char i = 0; i < _mqtt_queue.size(); i++) {
-        mqtt_message_t element = _mqtt_queue[i];
-        free(element.topic);
-        if (element.message) {
-            free(element.message);
-        }
-    }
-    _mqtt_queue.clear();*/
-}
-
-void mqttQueueTopic(const char * topic) {
-    String t = mqttTopic(topic, false);
-    if (!t.equals(_mqtt_topic_json)) {
-        mqttFlush();
-        _mqtt_topic_json = t;
-    }
-}
-
-int8_t mqttEnqueue(const char * topic, const char * message, unsigned char parent) {
-
-    // Queue is not meant to send message "offline"
-    // We must prevent the queue does not get full while offline
-    if (!_mqtt.connected()) return -1;
-
-    // Force flusing the queue if the MQTT_QUEUE_MAX_SIZE has been reached
-    if (_mqtt_queue.size() >= MQTT_QUEUE_MAX_SIZE) mqttFlush();
-
-    int8_t index = _mqtt_queue.size();
-
-    // Enqueue new message
-    mqtt_message_t element;
-    element.parent = parent;
-    element.topic = strdup(topic);
-    if (NULL != message) {
-        element.message = strdup(message);
-    }
-    _mqtt_queue.push_back(element);
-
-    return index;
-}
-
-int8_t mqttEnqueue(const char * topic, const char * message) {
-    return mqttEnqueue(topic, message, 255);
-}
-
-// -----------------------------------------------------------------------------
-
 void mqttSubscribeRaw(const char * topic) {
-    if (_mqtt.connected() && (strlen(topic) > 0)) {
+    if (isMqttConnected() && (strlen(topic) > 0)) {
         unsigned int packetId = _mqtt.subscribe(topic, _mqtt_qos);
         DEBUG_MSG_P(PSTR("[MQTT] Subscribing to %s (PID %d)\n"), topic, packetId);
     }
@@ -466,7 +332,7 @@ void mqttSubscribe(const char * topic) {
 }
 
 void mqttUnsubscribeRaw(const char * topic) {
-    if (_mqtt.connected() && (strlen(topic) > 0)) {
+    if (isMqttConnected() && (strlen(topic) > 0)) {
         unsigned int packetId = _mqtt.unsubscribe(topic);
         DEBUG_MSG_P(PSTR("[MQTT] Unsubscribing to %s (PID %d)\n"), topic, packetId);
     }
@@ -486,19 +352,11 @@ bool mqttEnabled() {
     return _mqtt_enabled;
 }
 
-bool mqttConnected() {
-    return _mqtt.connected();
-}
-
 void mqttDisconnect() {
-    if (_mqtt.connected()) {
+    if (isMqttConnected()) {
         DEBUG_MSG_P(PSTR("[MQTT] Disconnecting\n"));
         _mqtt.disconnect();
     }
-}
-
-bool mqttForward() {
-    return _mqtt_forward;
 }
 
 void mqttRegister(mqtt_callback_f callback) {
@@ -508,7 +366,7 @@ void mqttRegister(mqtt_callback_f callback) {
 void mqttSetBroker(IPAddress ip, unsigned int port) {
     setSetting("mqttServer", ip.toString());
     setSetting("mqttPort", port);
-    mqttEnabled(MQTT_AUTOCONNECT);
+    mqttEnabled(true);
 }
 
 void mqttSetBrokerIfNone(IPAddress ip, unsigned int port) {

@@ -1,0 +1,5 @@
+https://github.com/espressif/esptool
+
+$ pip install esptool
+# Erase flash completely
+esptool.py erase_flash

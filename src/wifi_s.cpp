@@ -8,7 +8,6 @@ Copyright (C) 2019 by Shaeed Khan
 
 #include "wifi_s.h"
 
-uint32_t _wifi_scan_client_id = 0;
 bool _wifi_wps_running = false;
 bool _wifi_smartconfig_running = false;
 uint8_t _wifi_ap_mode = WIFI_AP_FALLBACK;
@@ -69,55 +68,6 @@ void _wifiConfigure() {
     	sleep_mode = constrain(sleep_mode, 0, 2);
     	WiFi.setSleepMode(static_cast<WiFiSleepType_t>(sleep_mode));
     #endif
-
-
-}
-
-void _wifiScan(uint32_t client_id = 0) {
-    DEBUG_MSG_P(PSTR("[WIFI] Start scanning\n"));
-
-    unsigned char result = WiFi.scanNetworks();
-
-    if (result == WIFI_SCAN_FAILED) {
-        DEBUG_MSG_P(PSTR("[WIFI] Scan failed\n"));
-    } else if (result == 0) {
-        DEBUG_MSG_P(PSTR("[WIFI] No networks found\n"));
-    } else {
-        DEBUG_MSG_P(PSTR("[WIFI] %d networks found:\n"), result);
-
-        // Populate defined networks with scan data
-        for (int8_t i = 0; i < result; ++i) {
-            String ssid_scan;
-            int32_t rssi_scan;
-            uint8_t sec_scan;
-            uint8_t* BSSID_scan;
-            int32_t chan_scan;
-            char buffer[128];
-			
-			#if defined(ARDUINO_ARCH_ESP32)
-        		WiFi.getNetworkInfo(i, ssid_scan, sec_scan, rssi_scan, BSSID_scan, chan_scan);
-    		#elif defined(ARDUINO_ARCH_ESP8266)
-            	bool hidden_scan;
-        		WiFi.getNetworkInfo(i, ssid_scan, sec_scan, rssi_scan, BSSID_scan, chan_scan, hidden_scan);
-    		#endif
-
-            snprintf_P(buffer, sizeof(buffer),
-                PSTR("BSSID: %02X:%02X:%02X:%02X:%02X:%02X SEC: %s RSSI: %3d CH: %2d SSID: %s"),
-                BSSID_scan[0], BSSID_scan[1], BSSID_scan[2], BSSID_scan[3], BSSID_scan[4], BSSID_scan[5],
-				#if defined(ARDUINO_ARCH_ESP32)
-            		(sec_scan != WIFI_AUTH_OPEN ? "YES" : "NO "),
-    			#elif defined(ARDUINO_ARCH_ESP8266)
-        			(sec_scan != ENC_TYPE_NONE ? "YES" : "NO "),
-    			#endif
-                rssi_scan,
-                chan_scan,
-                (char *) ssid_scan.c_str()
-            );
-
-            DEBUG_MSG_P(PSTR("[WIFI] > %s\n"), buffer);
-        }
-    }
-    WiFi.scanDelete();
 }
 
 bool _wifiClean(unsigned char num) {
@@ -383,7 +333,6 @@ bool wifiConnected() {
 	#if defined(ARDUINO_ARCH_ESP32)
         return WiFi.status() == WL_CONNECTED;
     #elif defined(ARDUINO_ARCH_ESP8266)
-        //return jw.connected();
         return WiFi.status() == WL_CONNECTED;
     #endif
 }
@@ -415,8 +364,7 @@ void wifiStartSmartConfig() {
 #endif // defined(JUSTWIFI_ENABLE_SMARTCONFIG)
 
 void wifiReconnectCheck() {
-    bool connected = false;
-    jw.setReconnectTimeout(connected ? 0 : WIFI_RECONNECT_INTERVAL);
+    jw.setReconnectTimeout(WIFI_RECONNECT_INTERVAL);
 }
 
 uint8_t wifiState() {
@@ -444,12 +392,6 @@ void wifiSetup() {
     wifiRegister(_wifiCallback);
     wifiRegister(_wifiDebugCallback);
 
-    #if WEB_SUPPORT
-        wsOnSendRegister(_wifiWebSocketOnSend);
-        wsOnReceiveRegister(_wifiWebSocketOnReceive);
-        wsOnActionRegister(_wifiWebSocketOnAction);
-    #endif
-
     // Main callbacks
     espurnaRegisterLoop(wifiLoop);
     espurnaRegisterReload(_wifiConfigure);
@@ -460,12 +402,6 @@ void wifiSetup() {
 void wifiLoop() {
     // Main wifi loop
     jw.loop();
-
-    // Do we have a pending scan?
-    if (_wifi_scan_client_id > 0) {
-        _wifiScan(_wifi_scan_client_id);
-        _wifi_scan_client_id = 0;
-    }
 
     // Check if we should disable AP
     static unsigned long last = 0;

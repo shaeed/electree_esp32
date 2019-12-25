@@ -12,8 +12,6 @@
 #include "utils.h"
 
 #define GPIO_NONE           0x99
-#define RELAY_DELAY_ON       0
-#define RELAY_DELAY_OFF      0
 
 #define RELAY_BOOT_OFF              0
 #define RELAY_BOOT_ON               1
@@ -24,43 +22,9 @@
 #define RELAY_TYPE_INVERSE          1
 #define RELAY_TYPE_PWM              2
 
-#define RELAY_SYNC_ANY              0
-#define RELAY_SYNC_NONE_OR_ONE      1
-#define RELAY_SYNC_ONE              2
-#define RELAY_SYNC_SAME             3
-
-#define RELAY_PULSE_NONE            0
-#define RELAY_PULSE_OFF             1
-#define RELAY_PULSE_ON              2
-
-#define RELAY_PROVIDER_RELAY        0
-#define RELAY_PROVIDER_DUAL         1
-#define RELAY_PROVIDER_LIGHT        2
-#define RELAY_PROVIDER_RFBRIDGE     3
-#define RELAY_PROVIDER_STM          4
-
-#define RELAY_GROUP_SYNC_NORMAL      0
-#define RELAY_GROUP_SYNC_INVERSE     1
-#define RELAY_GROUP_SYNC_RECEIVEONLY 2
-
 // Default boot mode: 0 means OFF, 1 ON and 2 whatever was before
 #ifndef RELAY_BOOT_MODE
 #define RELAY_BOOT_MODE             RELAY_BOOT_SAME
-#endif
-
-// 0 means ANY, 1 zero or one and 2 one and only one
-#ifndef RELAY_SYNC
-#define RELAY_SYNC                  RELAY_SYNC_ANY
-#endif
-
-// Default pulse mode: 0 means no pulses, 1 means normally off, 2 normally on
-#ifndef RELAY_PULSE_MODE
-#define RELAY_PULSE_MODE            RELAY_PULSE_NONE
-#endif
-
-// Default pulse time in seconds
-#ifndef RELAY_PULSE_TIME
-#define RELAY_PULSE_TIME            1.0
 #endif
 
 // Relay requests flood protection window - in seconds
@@ -71,11 +35,6 @@
 // Allowed actual relay changes inside requests flood protection window
 #ifndef RELAY_FLOOD_CHANGES
 #define RELAY_FLOOD_CHANGES         5
-#endif
-
-// Pulse with in milliseconds for a latched relay
-#ifndef RELAY_LATCHING_PULSE
-#define RELAY_LATCHING_PULSE        10
 #endif
 
 // Do not save relay state after these many milliseconds
@@ -90,14 +49,6 @@
 #ifndef RELAY_MQTT_OFF
 #define RELAY_MQTT_OFF              "0"
 #endif
-
-#define EEPROM_RELAY_STATUS     0               // Address for the relay status (1 byte)
-#define EEPROM_ENERGY_COUNT     1               // Address for the energy counter (4 bytes)
-#define EEPROM_CUSTOM_RESET     5               // Address for the reset reason (1 byte)
-#define EEPROM_CRASH_COUNTER    6               // Address for the crash counter (1 byte)
-#define EEPROM_MESSAGE_ID       7               // Address for the MQTT message id (4 bytes)
-#define EEPROM_ROTATE_DATA      11              // Reserved for the EEPROM_ROTATE library (3 bytes)
-#define EEPROM_DATA_END         14              // End of custom EEPROM data block
 
 void _relayProviderStatus(unsigned char id, bool status);
 void _relayProcess(bool mode);

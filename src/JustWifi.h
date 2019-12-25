@@ -52,6 +52,10 @@ extern "C" {
 #define DEBUG_WIFI_MULTI(...)
 #endif
 
+#ifndef JUSTWIFI_ENABLE_SMARTCONFIG
+#define JUSTWIFI_ENABLE_SMARTCONFIG
+#endif
+
 typedef struct {
     char * ssid;
     char * pass;

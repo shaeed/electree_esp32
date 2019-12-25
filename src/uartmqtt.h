@@ -39,17 +39,9 @@ Copyright (C) 2019 by Shaeed Khan
 #define UART_MQTT_BUFFER_SIZE       200         // UART buffer size
 
 // Internal MQTT events
-#ifndef MQTT_CONNECT_EVENT
 #define MQTT_CONNECT_EVENT          0
-#endif
-
-#ifndef MQTT_DISCONNECT_EVENT
 #define MQTT_DISCONNECT_EVENT       1
-#endif
-
-#ifndef MQTT_MESSAGE_EVENT
 #define MQTT_MESSAGE_EVENT          2
-#endif
 
 void _uartmqttReceiveUART();
 void _sendOnMqtt(const char * data);

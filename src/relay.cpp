@@ -260,8 +260,6 @@ void _relayBoot() {
 
         // Save if there is any relay in the RELAY_BOOT_TOGGLE mode
         if (trigger_save) {
-            //EEPROMr.write(EEPROM_RELAY_STATUS, mask);
-            //eepromCommit();
             setSetting(K_RELAY_STATUS_ALL, j, mask);
         }
     }
@@ -438,12 +436,6 @@ void relayMQTTCallback(unsigned int type, const char * topic, const char * paylo
             //Configure relay from mqtt
             relayConfigureMqtt(payload);
         }
-        // Itead Sonoff IFAN02
-        /*#if defined (ITEAD_SONOFF_IFAN02)
-            if (t.startsWith(MQTT_TOPIC_SPEED)) {
-                setSpeed(atoi(payload));
-            }
-        #endif*/
     }
 
     if (type == MQTT_DISCONNECT_EVENT) {
@@ -465,10 +457,7 @@ void relaySetup() {
     char noOfRelays = getSetting(K_NO_OF_RELAYS, 0).toInt();
     for(char i = 0; i < noOfRelays; i++) {
         _relays.push_back((relay_t) { getSetting(K_RELAY_PIN, i, GPIO_NONE).toInt(),
-                                    getSetting(K_RELAY_TYPE, i, RELAY_TYPE_INVERSE).toInt(),
-                                    //GPIO_NONE,
-                                    //RELAY_DELAY_ON,
-                                    //RELAY_DELAY_OFF 
+                                    getSetting(K_RELAY_TYPE, i, RELAY_TYPE_INVERSE).toInt()
                                     });
     }
 
