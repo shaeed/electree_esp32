@@ -24,9 +24,9 @@ String getIdentifier() {
 
 void setDefaultHostname() {
     if (strlen(HOSTNAME) > 0) {
-        setSetting("hostname", HOSTNAME);
+        setSetting(K_HOSTNAME, HOSTNAME);
     } else {
-        setSetting("hostname", getIdentifier());
+        setSetting(K_HOSTNAME, getIdentifier());
     }
 }
 

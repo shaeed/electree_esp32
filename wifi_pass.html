@@ -1,0 +1,31 @@
+<html>
+<head>
+	<title>ELECTREE-Wifi Conf page</title>
+	<style>
+		body { background-color: #cccccc; font-family: Arial, Helvetica, Sans-Serif; Color: #000088; }
+	</style>
+</head>
+<body><center>
+	<h1>Wifi and MQTT Configuration</h1>
+	<form action='/save' method='post'>
+	<table>
+		<tr><td>Wifi 1 SSID:</td><td><input type='text' name='ssid1' value='test ssid'></td></tr>
+		<tr><td>Wifi 1 Password:</td><td><input type='text' name='pass1' value='test pass'></td></tr>
+		<tr><td>Wifi 2 SSID:</td><td><input type='text' name='ssid2'></td></tr>
+		<tr><td>Wifi 2 Password:</td><td><input type='text' name='pass2'></td></tr>
+		<tr><td>Wifi 3 SSID:</td><td><input type='text' name='ssid3'></td></tr>
+		<tr><td>Wifi 3 Password:</td><td><input type='text' name='pass3'></td></tr>
+		<tr><td>Wifi 4 SSID:</td><td><input type='text' name='ssid4'></td></tr>
+		<tr><td>Wifi 4 Password:</td><td><input type='text' name='pass4'></td></tr>
+		<tr><td>Wifi 5 SSID:</td><td><input type='text' name='ssid5'></td></tr>
+		<tr><td>Wifi 5 Password:</td><td><input type='text' name='pass5'></td></tr>
+		<tr><td colspan='2'>-----</td></tr>
+		<tr><td>MQTT Server IP:</td><td><input type='text' name='mqttip'></td></tr>
+		<tr><td>MQTT User:</td><td><input type='text' name='mqttuser'></td></tr>
+		<tr><td>MQTT Password:</td><td><input type='text' name='mqttpass'></td></tr>
+		<tr><td>MQTT Port:</td><td><input type='text' name='mqttport'></td></tr>
+		<tr><td colspan='2'><input type='submit' value='Save'></td></tr>
+	</table>
+	</form>
+</center></body>
+</html>

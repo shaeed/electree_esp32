@@ -27,8 +27,8 @@ void _wifiCheckAP() {
 }
 
 void _wifiConfigure() {
-    jw.setHostname(getSetting("hostname").c_str());
-    jw.setSoftAP(getSetting("hostname").c_str(), getAdminPass().c_str());
+    jw.setHostname(getSetting(K_HOSTNAME).c_str());
+    jw.setSoftAP(getSetting(K_HOSTNAME).c_str(), getAdminPass().c_str());
     jw.setConnectTimeout(WIFI_CONNECT_TIMEOUT);
     wifiReconnectCheck();
     jw.enableAPFallback(WIFI_FALLBACK_APMODE);
@@ -39,22 +39,21 @@ void _wifiConfigure() {
     // Clean settings
     _wifiClean(WIFI_MAX_NETWORKS);
 
-    int i;
-    for (i = 0; i< WIFI_MAX_NETWORKS; i++) {
-        if (getSetting("ssid" + String(i)).length() == 0) break;
-        if (getSetting("ip" + String(i)).length() == 0) {
+    for (uint8_t i = 0; i < WIFI_MAX_NETWORKS; i++) {
+        if (!hasSetting("ssid", i)) break;
+        if (!hasSetting("ip", i)) {
             jw.addNetwork(
-                getSetting("ssid" + String(i)).c_str(),
-                getSetting("pass" + String(i)).c_str()
+                getSetting("ssid", i, "").c_str(),
+                getSetting("pass", i, "").c_str()
             );
         } else {
             jw.addNetwork(
-                getSetting("ssid" + String(i)).c_str(),
-                getSetting("pass" + String(i)).c_str(),
-                getSetting("ip" + String(i)).c_str(),
-                getSetting("gw" + String(i)).c_str(),
-                getSetting("mask" + String(i)).c_str(),
-                getSetting("dns" + String(i)).c_str()
+                getSetting("ssid", i, "").c_str(),
+                getSetting("pass", i, "").c_str(),
+                getSetting("ip", i, "").c_str(),
+                getSetting("gw", i, "").c_str(),
+                getSetting("mask", i, "").c_str(),
+                getSetting("dns", i, "").c_str()
             );
         }
     }
@@ -118,17 +117,6 @@ void _wifiInject() {
             setSetting("mask", 0, WIFI1_MASK);
             setSetting("dns", 0, WIFI1_DNS);
         }
-
-        if (strlen(WIFI2_SSID)) {
-            if (!hasSetting("ssid", 1)) {
-                setSetting("ssid", 1, WIFI2_SSID);
-                setSetting("pass", 1, WIFI2_PASS);
-                setSetting("ip", 1, WIFI2_IP);
-                setSetting("gw", 1, WIFI2_GW);
-                setSetting("mask", 1, WIFI2_MASK);
-                setSetting("dns", 1, WIFI2_DNS);
-            }
-        }
     }
 }
 
@@ -151,24 +139,39 @@ void _wifiCallback(justwifi_messages_t code, char * parameter) {
     if (MESSAGE_WPS_SUCCESS == code || MESSAGE_SMARTCONFIG_SUCCESS == code) {
         String ssid = WiFi.SSID();
         String pass = WiFi.psk();
-
-        // Look for the same SSID
-        uint8_t count = 0;
-        while (count < WIFI_MAX_NETWORKS) {
-            if (!hasSetting("ssid", count)) break;
-            if (ssid.equals(getSetting("ssid", count, ""))) break;
-            count++;
-        }
-
-        // If we have reached the max we overwrite the first one
-        if (WIFI_MAX_NETWORKS == count) count = 0;
-
-        setSetting("ssid", count, ssid);
-        setSetting("pass", count, pass);
+        saveWifiCredential(ssid, pass);
 
         _wifi_wps_running = false;
         _wifi_smartconfig_running = false;
         jw.enableAP(true);
+    }
+}
+
+void saveWifiCredential(String ssid, String pass) {
+    // Look for the same SSID
+    uint8_t count = 0;
+    while (count < WIFI_MAX_NETWORKS) {
+        if (!hasSetting("ssid", count)) break;
+        if (ssid.equals(getSetting("ssid", count, ""))) break;
+        count++;
+    }
+
+    // If we have reached the max we overwrite the first one
+    if (WIFI_MAX_NETWORKS == count) count = 0;
+
+    saveWifiCredential(ssid, pass, count);
+}
+
+void saveWifiCredential(String ssid, String pass, uint8_t index) {
+    //setSetting("ssid", index, ssid);
+    //setSetting("pass", index, pass);
+
+    if(!ssid.equals(getSetting("ssid", index, ""))){
+        setSetting("ssid", index, ssid);
+    }
+
+    if(!pass.equals(getSetting("pass", index, ""))){
+        setSetting("pass", index, pass);
     }
 }
 
@@ -212,6 +215,7 @@ void _wifiDebugCallback(justwifi_messages_t code, char * parameter) {
 
     if (code == MESSAGE_CONNECTED) {
         wifiDebug(WIFI_STA);
+        startWebServer();
     }
 
     if (code == MESSAGE_DISCONNECTED) {
@@ -226,6 +230,7 @@ void _wifiDebugCallback(justwifi_messages_t code, char * parameter) {
 
     if (code == MESSAGE_ACCESSPOINT_CREATED) {
         wifiDebug(WIFI_AP);
+        startWebServer();
     }
 
     if (code == MESSAGE_ACCESSPOINT_FAILED) {
@@ -289,7 +294,7 @@ void wifiDebug(WiFiMode_t modes) {
 
     if (((modes & WIFI_AP) > 0) && ((WiFi.getMode() & WIFI_AP) > 0)) {
         DEBUG_MSG_P(PSTR("[WIFI] -------------------------------------- MODE AP\n"));
-        DEBUG_MSG_P(PSTR("[WIFI] SSID  %s\n"), getSetting("hostname").c_str());
+        DEBUG_MSG_P(PSTR("[WIFI] SSID  %s\n"), getSetting(K_HOSTNAME).c_str());
         DEBUG_MSG_P(PSTR("[WIFI] PASS  %s\n"), getAdminPass().c_str());
         DEBUG_MSG_P(PSTR("[WIFI] IP    %s\n"), WiFi.softAPIP().toString().c_str());
         DEBUG_MSG_P(PSTR("[WIFI] MAC   %s\n"), WiFi.softAPmacAddress().c_str());
@@ -307,9 +312,9 @@ void wifiDebug(WiFiMode_t modes) {
     }
 }
 
-void wifiDebug() {
+/*void wifiDebug() {
     wifiDebug(WIFI_AP_STA);
-}
+}*/
 
 // -----------------------------------------------------------------------------
 // API
@@ -337,9 +342,9 @@ bool wifiConnected() {
     #endif
 }
 
-void wifiDisconnect() {
+/*void wifiDisconnect() {
     jw.disconnect();
-}
+}*/
 
 void wifiStartAP(bool only) {
     if (only) {
@@ -397,6 +402,7 @@ void wifiSetup() {
     espurnaRegisterReload(_wifiConfigure);
     
     //jw.init(); //Only in case of esp32; not neccessary
+    //wifiStartSmartConfig();
 }
 
 void wifiLoop() {

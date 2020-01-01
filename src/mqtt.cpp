@@ -45,22 +45,22 @@ void _mqttConnect() {
         _mqtt_reconnect_delay = MQTT_RECONNECT_DELAY_MAX;
     }
 
-    String h = getSetting("mqttServer", MQTT_SERVER);
+    String h = getSetting(K_MQTT_SERVER, MQTT_SERVER);
     char * host = strdup(h.c_str());
 
-    unsigned int port = getSetting("mqttPort", MQTT_PORT).toInt();
+    unsigned int port = getSetting(K_MQTT_PORT, MQTT_PORT).toInt();
 
     if (_mqtt_user) free(_mqtt_user);
     if (_mqtt_pass) free(_mqtt_pass);
     if (_mqtt_will) free(_mqtt_will);
     if (_mqtt_clientid) free(_mqtt_clientid);
 
-    String user = getSetting("mqttUser", MQTT_USER);
+    String user = getSetting(K_MQTT_USER, MQTT_USER);
     _mqttPlaceholders(&user);
     _mqtt_user = strdup(user.c_str());
-    _mqtt_pass = strdup(getSetting("mqttPassword", MQTT_PASS).c_str());
+    _mqtt_pass = strdup(getSetting(K_MQTT_PASS, MQTT_PASS).c_str());
     _mqtt_will = strdup(mqttTopic(MQTT_TOPIC_STATUS, false).c_str());
-    String clientid = getSetting("mqttClientID", getIdentifier());
+    String clientid = getSetting(K_MQTT_CLT_ID, getIdentifier());
     _mqttPlaceholders(&clientid);
     _mqtt_clientid = strdup(clientid.c_str());
 
@@ -80,12 +80,12 @@ void _mqttConnect() {
    
     #if ASYNC_TCP_SSL_ENABLED
    
-        bool secure = getSetting("mqttUseSSL", MQTT_SSL_ENABLED).toInt() == 1;
+        bool secure = getSetting(K_MQTT_USE_SSL, MQTT_SSL_ENABLED).toInt() == 1;
         _mqtt.setSecure(secure);
         if (secure) {
             DEBUG_MSG_P(PSTR("[MQTT] Using SSL\n"));
             unsigned char fp[20] = {0};
-            if (sslFingerPrintArray(getSetting("mqttFP", MQTT_SSL_FINGERPRINT).c_str(), fp)) {
+            if (sslFingerPrintArray(getSetting(K_MQTT_FP, MQTT_SSL_FINGERPRINT).c_str(), fp)) {
                 _mqtt.addServerFingerprint(fp);
             } else {
                 DEBUG_MSG_P(PSTR("[MQTT] Wrong fingerprint\n"));
@@ -105,7 +105,7 @@ void _mqttConnect() {
 }
 
 void _mqttPlaceholders(String *text) {
-    text->replace("{hostname}", getSetting("hostname"));
+    text->replace("{hostname}", getSetting(K_HOSTNAME));
     text->replace("{magnitude}", "#");
     
     String mac = WiFi.macAddress();
@@ -115,7 +115,7 @@ void _mqttPlaceholders(String *text) {
 
 void _mqttConfigure() {
     // Get base topic
-    _mqtt_topic_base = getSetting("mqttTopic", MQTT_TOPIC);
+    _mqtt_topic_base = getSetting(K_MQTT_TOPIC, MQTT_TOPIC);
     if (_mqtt_topic_base.endsWith("/")) _mqtt_topic_base.remove(_mqtt_topic_base.length()-1);
 
     // Placeholders
@@ -123,22 +123,21 @@ void _mqttConfigure() {
     if (_mqtt_topic_base.indexOf("#") == -1) _mqtt_topic_base = _mqtt_topic_base + "/#";
 
     // Getters and setters
-    _mqtt_setter = getSetting("mqttSetter", MQTT_SETTER);
-    _mqtt_getter = getSetting("mqttGetter", MQTT_GETTER);
+    _mqtt_setter = getSetting(K_MQTT_SETTER, MQTT_SETTER);
+    _mqtt_getter = getSetting(K_MQTT_GETTER, MQTT_GETTER);
     _mqtt_forward = !_mqtt_getter.equals(_mqtt_setter);
 
     // MQTT options
-    _mqtt_qos = getSetting("mqttQoS", MQTT_QOS).toInt();
-    _mqtt_retain = getSetting("mqttRetain", MQTT_RETAIN).toInt() == 1;
-    _mqtt_keepalive = getSetting("mqttKeep", MQTT_KEEPALIVE).toInt();
-    if (getSetting("mqttClientID").length() == 0) delSetting("mqttClientID");
+    _mqtt_qos = getSetting(K_MQTT_QOS, MQTT_QOS).toInt();
+    _mqtt_retain = getSetting(K_MQTT_RETAIN, MQTT_RETAIN).toInt() == 1;
+    _mqtt_keepalive = getSetting(K_MQTT_KEEP, MQTT_KEEPALIVE).toInt();
+    if (getSetting(K_MQTT_CLT_ID).length() == 0) delSetting(K_MQTT_CLT_ID);
 
     // Enable
-    if (getSetting("mqttServer", MQTT_SERVER).length() == 0) {
+    if (getSetting(K_MQTT_SERVER, MQTT_SERVER).length() == 0) {
         mqttEnabled(false);
     } else {
-        //_mqtt_enabled = getSetting("mqttEnabled", true).toInt() == 1;
-        mqttEnabled(getSetting("mqttEnabled", true).toInt() == 1);
+        mqttEnabled(getSetting(K_MQTT_ENABLED, true).toInt() == 1);
     }
 
     _mqtt_reconnect_delay = MQTT_RECONNECT_DELAY_MIN;
@@ -285,8 +284,9 @@ String mqttTopic(const char * magnitude, unsigned int index, bool is_set) {
 
 void mqttSendRaw(const char * topic, const char * message, bool retain) {
     if (isMqttConnected()) {
-        unsigned int packetId = _mqtt.publish(topic, _mqtt_qos, retain, message);
+        //unsigned int packetId = _mqtt.publish(topic, _mqtt_qos, retain, message);
         //DEBUG_MSG_P(PSTR("[MQTT] Sending %s => %s (PID %d)\n"), topic, message, packetId);
+        _mqtt.publish(topic, _mqtt_qos, retain, message);
     }
 }
 
@@ -363,19 +363,18 @@ void mqttRegister(mqtt_callback_f callback) {
     _mqtt_callbacks.push_back(callback);
 }
 
-void mqttSetBroker(IPAddress ip, unsigned int port) {
-    setSetting("mqttServer", ip.toString());
-    setSetting("mqttPort", port);
-    mqttEnabled(true);
-}
+void saveMqttConfig(String ip, String port, String user, String pass) {
+    if(port.equals(""))
+        return;
 
-void mqttSetBrokerIfNone(IPAddress ip, unsigned int port) {
-    if (getSetting("mqttServer", MQTT_SERVER).length() == 0) mqttSetBroker(ip, port);
-}
-
-void mqttReset() {
-    _mqttConfigure();
-    mqttDisconnect();
+    if(!ip.equals(getSetting(K_MQTT_SERVER, MQTT_SERVER)))
+        setSetting(K_MQTT_SERVER, ip);
+    if(!ip.equals(getSetting(K_MQTT_PORT, MQTT_PORT)))
+        setSetting(K_MQTT_PORT, port);
+    if(!ip.equals(getSetting(K_MQTT_USER, MQTT_USER)))
+        setSetting(K_MQTT_USER, user);
+    if(!ip.equals(getSetting(K_MQTT_PASS, MQTT_PASS)))
+        setSetting(K_MQTT_PASS, pass);
 }
 
 // -----------------------------------------------------------------------------
@@ -429,6 +428,6 @@ void mqttSetup() {
 }
 
 void mqttLoop() {
-    if (WiFi.status() != WL_CONNECTED) return;
+    if (!wifiConnected()) return;
 	_mqttConnect();
 }

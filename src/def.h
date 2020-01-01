@@ -10,23 +10,13 @@ Copyright (C) 2019 by Shaeed Khan
 #define DEF_H
 
 #define APP_NAME                "ELECTREE"
-
-#ifndef HOSTNAME
 #define HOSTNAME                ""  //Keep this empty to use the MANUFACTURER and Mac id as host name.
-#endif
-
-
 #define MANUFACTURER            "ELECTREE"
 #define DEVICE                  "esp01"
 #define DEVICE_NAME             MANUFACTURER "_" DEVICE     // Concatenate both to get a unique device name
+#define ADMIN_PASS              "electree@1"     // Default password (WEB, OTA, WIFI SoftAP)
 
-#ifndef ADMIN_PASS
-#define ADMIN_PASS              "Shaeed@12"     // Default password (WEB, OTA, WIFI SoftAP)
-#endif
-
-#ifndef LOOP_DELAY_TIME
 #define LOOP_DELAY_TIME         1               // Delay for this millis in the main loop [0-250] (see https://github.com/xoseperez/espurna/issues/1541)
-#endif
 
 #define JSON_RCONF                 "rcfg"
 #define JSON_BCONF                 "bcfg"

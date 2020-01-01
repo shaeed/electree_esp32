@@ -15,6 +15,7 @@ Copyright (C) 2019 by Shaeed Khan
 #include "prototypes.h"
 #include "def.h"
 #include "settings.h"
+#include "web.h"
 
 #define WIFI_STATE_AP               1
 #define WIFI_STATE_STA              2
@@ -37,19 +38,12 @@ Copyright (C) 2019 by Shaeed Khan
 #define WIFI_SCAN_NETWORKS          1                   // Perform a network scan before connecting
 
 // Optional hardcoded configuration (up to 2 networks)
-#define WIFI1_SSID                  "AKG"
-#define WIFI1_PASS                  "Ashwani#$458941"
+#define WIFI1_SSID                  "ELECTREE"
+#define WIFI1_PASS                  "electree@1"
 #define WIFI1_IP                    ""
 #define WIFI1_GW                    ""
 #define WIFI1_MASK                  ""
 #define WIFI1_DNS                   ""
-
-#define WIFI2_SSID                  ""
-#define WIFI2_PASS                  ""
-#define WIFI2_IP                    ""
-#define WIFI2_GW                    ""
-#define WIFI2_MASK                  ""
-#define WIFI2_DNS                   ""
 
 #ifndef JUSTWIFI_ENABLE_SMARTCONFIG
 #define JUSTWIFI_ENABLE_SMARTCONFIG
@@ -57,7 +51,6 @@ Copyright (C) 2019 by Shaeed Khan
 
 typedef std::function<void(justwifi_messages_t code, char * parameter)> wifi_callback_f;
 void wifiRegister(wifi_callback_f callback);
-bool wifiConnected();
 
 void wifiSetup();
 void wifiLoop();
@@ -69,5 +62,11 @@ String getIP();
 void wifiStartAP(bool only);
 void wifiStartAP();
 bool wifiConnected();
+void saveWifiCredential(String ssid, String pass);
+void saveWifiCredential(String ssid, String pass, uint8_t index);
+
+#if defined(JUSTWIFI_ENABLE_SMARTCONFIG)
+    void wifiStartSmartConfig();
+#endif // defined(JUSTWIFI_ENABLE_SMARTCONFIG)
 
 #endif

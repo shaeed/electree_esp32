@@ -20,6 +20,7 @@ Copyright (C) 2019 by Shaeed Khan
 #include "button.h"
 #include "relay.h"
 #include "led2812b.h"
+#include "web.h"
 
 std::vector<void (*)()> _loop_callbacks;
 std::vector<void (*)()> _reload_callbacks;
@@ -43,13 +44,14 @@ void setup() {
   debugSetup();
   settingsSetup();
 
-  if (getSetting("hostname").length() == 0) {
+  if (getSetting(K_HOSTNAME).length() == 0) {
     setDefaultHostname();
   }
 
   info();
   relaySetup();
   wifiSetup();
+  webServerSetup();
   mqttSetup();
   uartmqttSetup();
   buttonSetup();
