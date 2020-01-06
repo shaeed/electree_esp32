@@ -108,6 +108,7 @@ void Led2812b::_setupFastLed(uint16_t noOfLeds, uint8_t gpio) {
     case 5:
         FastLED.addLeds<STRIP_TYPE, 5, COLOR_MODE>(_leds, noOfLeds);
         break;
+#if defined(ARDUINO_ARCH_ESP32)
     case 12:
         FastLED.addLeds<STRIP_TYPE, 12, COLOR_MODE>(_leds, noOfLeds);
         break;
@@ -123,6 +124,8 @@ void Led2812b::_setupFastLed(uint16_t noOfLeds, uint8_t gpio) {
     case 16:
         FastLED.addLeds<STRIP_TYPE, 16, COLOR_MODE>(_leds, noOfLeds);
         break;
+    
+
     case 17:
         FastLED.addLeds<STRIP_TYPE, 17, COLOR_MODE>(_leds, noOfLeds);
         break;
@@ -156,7 +159,7 @@ void Led2812b::_setupFastLed(uint16_t noOfLeds, uint8_t gpio) {
     case 33:
         FastLED.addLeds<STRIP_TYPE, 33, COLOR_MODE>(_leds, noOfLeds);
         break;
-    
+#endif
     default:
         break;
     }
@@ -166,7 +169,8 @@ void Led2812b::_initVars(){
     _brtTemp = 0;
     _showBlack = true;
     _hueInt = 0;
-
+    if(_brt < 10)
+        _brt = 10;
 }
 
 void Led2812b::setPixel(int Pixel, byte red, byte green, byte blue) {
@@ -455,12 +459,32 @@ void updateLed2812bStrip(byte stripNo, byte theme, int16_t brt, int16_t spd, lon
         setSetting(K_LEDSTRIP_CLR, stripNo, clr);
         DEBUG_MSG_P(PSTR("[2812B] Strip %d color set to %d\n"), stripNo, clr);
     }
+
+    publishStripStatus(stripNo);
+}
+
+void publishStripStatus(byte stripNo){
+    if(stripNo > _strips.size())
+        return;
+    Led2812b* dstrip = _strips[stripNo];
+
+    //Publish theme, brightness, speed, color
+    mqttSend(MQTT_TOPIC_LEDSTRIP_THM, stripNo, String(dstrip->_theme).c_str());
+    mqttSend(MQTT_TOPIC_LEDSTRIP_BRT, stripNo, String(dstrip->_brt).c_str());
+    mqttSend(MQTT_TOPIC_LEDSTRIP_SPEED, stripNo, String(dstrip->_spd).c_str());
+    mqttSend(MQTT_TOPIC_LEDSTRIP_CLR, stripNo, String(dstrip->_clr).c_str());
+}
+
+void publishStripStatus(){
+    for(byte i = 0; i < _strips.size(); i++){
+        publishStripStatus(i);
+    }
 }
 
 void led2812bMQTTCallback(unsigned int type, const char * topic, const char * payload) {
     if (type == MQTT_CONNECT_EVENT) {
         // Send status on connect
-        //publishRelayStatus();
+        publishStripStatus();
 
         // Subscribe to own /set topic
         char relay_topic[strlen(MQTT_TOPIC_LEDSTRIP_THM) + 3];
@@ -496,8 +520,10 @@ void led2812bMQTTCallback(unsigned int type, const char * topic, const char * pa
             updateLed2812bStrip(id, 0, -1, val, -1);
 
         } else if (t.startsWith(MQTT_TOPIC_LEDSTRIP_CLR)) {
+            Serial.println("Color");
             byte id = t.substring(strlen(MQTT_TOPIC_LEDSTRIP_CLR)+1).toInt();
             long val = atoi(payload);
+            Serial.println(val);
             updateLed2812bStrip(id, 0, -1, -1, val);
 
         }
@@ -509,16 +535,6 @@ void led2812bMQTTCallback(unsigned int type, const char * topic, const char * pa
 }
 
 void led2812bSetup(){
-    //Default strip
-    // Led2812b* dstrip = new Led2812b(10, 33);
-    // dstrip->_theme = Theme_HueEffect;
-    // dstrip->_repeat = true;
-    // dstrip->_brt = 100;
-    // dstrip->_applyBrightness = true;
-
-    // _strips.push_back(dstrip);
-    
-        //tSetting(K_NO_OF_LEDSTRIPS, 0); 
     byte noOfStrips = getSetting(K_NO_OF_LEDSTRIPS, 0).toInt();
     for(byte i = 0; i < noOfStrips; i++){
         Led2812b* dstrip = new Led2812b(getSetting(K_LEDSTRIP_LEDCOUNT, i, 0).toInt(),

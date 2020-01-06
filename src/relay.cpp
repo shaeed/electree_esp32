@@ -210,22 +210,13 @@ void _relayBoot() {
     unsigned char mask;
     
     // Walk the relays
-    Serial.print("Relay boot" );
-    Serial.print(_relays.size());
-
     bool status;
     for(unsigned char j = 0; j <= _relays.size() / 8; j++){
-        Serial.print(" inside ");
-        Serial.print(j);
-
         unsigned char sizeOfCurrentBatch = _relays.size() > 8*(j+1) ? 8 : _relays.size() - 8*j;
         bit = 1;
         mask = getSetting(K_RELAY_STATUS_ALL, j, 0x00).toInt();
         DEBUG_MSG_P(PSTR("[RELAY] Retrieving mask: %d\n"), mask);
         trigger_save = false;
-
-        Serial.print(" batch size ");
-        Serial.print(sizeOfCurrentBatch);
 
         for (unsigned char i = 0; i < sizeOfCurrentBatch; i++) {
             unsigned char currentRelay = i + 8*j;

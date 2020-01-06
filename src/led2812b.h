@@ -82,5 +82,7 @@ class Led2812b {
 
 void led2812bSetup();
 void led2812bLoop();
+void publishStripStatus(byte stripNo);
+void publishStripStatus();
 
 #endif

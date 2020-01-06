@@ -1,13 +1,53 @@
 #include "web.h"
 
-WebServer httpServer(80);
+#if defined(ARDUINO_ARCH_ESP32)
+    //WebServer httpServer(80);
+	WebServer *httpServer;
+#elif defined(ARDUINO_ARCH_ESP8266)
+    //ESP8266WebServer httpServer (80);
+	ESP8266WebServer *httpServer;
+#endif
 
 void handleNotFound() {
   String message = "Invalid request.\n\n";
-  httpServer.send(404, "text/plain", message);
+  httpServer->send(404, "text/plain", message);
 }
 
 void handleRoot() {
+    #if defined(ARDUINO_ARCH_ESP8266)
+        String temp = PSTR("<html>\
+<head>\
+	<title>ELECTREE-Wifi Conf page</title>\
+	<style>\
+		body { background-color: #cccccc; font-family: Arial, Helvetica, Sans-Serif; Color: #000088; }\
+	</style>\
+</head>\
+<body><center>\
+	<h1>Wifi and MQTT Configuration</h1>\
+	<form action='/save' method='post'>\
+	<table>\
+		<tr><td>Wifi 1 SSID:</td><td><input type='text' name='ssid1'></td></tr>\
+		<tr><td>Wifi 1 Password:</td><td><input type='text' name='pass1'></td></tr>\
+		<tr><td>Wifi 2 SSID:</td><td><input type='text' name='ssid2'></td></tr>\
+		<tr><td>Wifi 2 Password:</td><td><input type='text' name='pass2'></td></tr>\
+		<tr><td>Wifi 3 SSID:</td><td><input type='text' name='ssid3'></td></tr>\
+		<tr><td>Wifi 3 Password:</td><td><input type='text' name='pass3'></td></tr>\
+		<tr><td>Wifi 4 SSID:</td><td><input type='text' name='ssid4'></td></tr>\
+		<tr><td>Wifi 4 Password:</td><td><input type='text' name='pass4'></td></tr>\
+		<tr><td>Wifi 5 SSID:</td><td><input type='text' name='ssid5'></td></tr>\
+		<tr><td>Wifi 5 Password:</td><td><input type='text' name='pass5'></td></tr>\
+		<tr><td colspan='2'>-----</td></tr>\
+		<tr><td>MQTT Server IP:</td><td><input type='text' name='mqttip'></td></tr>\
+		<tr><td>MQTT User:</td><td><input type='text' name='mqttuser'></td></tr>\
+		<tr><td>MQTT Password:</td><td><input type='text' name='mqttpass'></td></tr>\
+		<tr><td>MQTT Port:</td><td><input type='text' name='mqttport'></td></tr>\
+		<tr><td colspan='2'><input type='submit' value='Save'></td></tr>\
+	</table>\
+	</form>\
+</center></body>\
+</html>");
+
+    #elif defined(ARDUINO_ARCH_ESP32)
     String temp = PSTR("<html>\
 <head>\
 	<title>ELECTREE-Wifi Conf page</title>\
@@ -39,33 +79,33 @@ void handleRoot() {
 	</form>\
 </center></body>\
 </html>");
-    httpServer.send(200, "text/html", temp);
+    #endif
+    httpServer->send(200, "text/html", temp);
 }
 
 void handleSave(){
-    String ssid = httpServer.arg("ssid1");
-    String pass = httpServer.arg("pass1");
-    saveWifiCredential(ssid, pass, 0);
-    ssid = httpServer.arg("ssid2");
-    pass = httpServer.arg("pass2");
-    saveWifiCredential(ssid, pass, 1);
-    ssid = httpServer.arg("ssid3");
-    pass = httpServer.arg("pass3");
-    saveWifiCredential(ssid, pass, 2);
-    ssid = httpServer.arg("ssid4");
-    pass = httpServer.arg("pass4");
-    saveWifiCredential(ssid, pass, 3);
-    ssid = httpServer.arg("ssid5");
-    pass = httpServer.arg("pass5");
-    saveWifiCredential(ssid, pass, 4);
+    String ssid;
+    String pass;
 
-    String mqttip = httpServer.arg("mqttip");
-    ssid = httpServer.arg("mqttuser");
-    pass = httpServer.arg("mqttpass");
-    String port = httpServer.arg("mqttport");
-    saveMqttConfig(mqttip, port, ssid, pass);
+	for(byte i = 1; i <= WIFI_MAX_NETWORKS; i++){
+		if(httpServer->hasArg("ssid" + String(i))){
+    		ssid = httpServer->arg("ssid" + String(i));
+    		pass = httpServer->arg("pass" + String(i));
+			if(!ssid.equals(""))
+    			saveWifiCredential(ssid, pass, i-1);
+		}
+	}
 
-    httpServer.send(200, "text/html", "Saved!!\nRebooting ...");
+	if(httpServer->hasArg("mqttip")){
+    	ssid = httpServer->arg("mqttuser");
+    	pass = httpServer->arg("mqttpass");
+		if(!httpServer->arg("mqttip").equals(""))
+    		saveMqttConfig(httpServer->arg("mqttip"), httpServer->arg("mqttport"), ssid, pass);
+	}
+
+    httpServer->send(200, PSTR("text/html"), PSTR("Saved!!<br>Rebooting ..."));
+	stopWebServer();
+	delay(10);
     reset();
 }
 
@@ -78,18 +118,30 @@ void webServerSetup(){
 }
 
 void startWebServer(){
-    httpServer.on("/", handleRoot);
-    httpServer.on("/save", handleSave);
-    httpServer.onNotFound(handleNotFound);
-    httpServer.begin();
+	if(httpServer != NULL)
+		delete httpServer;
+	
+	#if defined(ARDUINO_ARCH_ESP32)
+	httpServer = new WebServer(80);
+	#elif defined(ARDUINO_ARCH_ESP8266)
+	httpServer = new ESP8266WebServer(80);
+	#endif
+
+    httpServer->on("/", handleRoot);
+    httpServer->on("/save", handleSave);
+    httpServer->onNotFound(handleNotFound);
+    httpServer->begin();
 
     DEBUG_MSG_P(PSTR("[WEB] HTTP Web server started\n"));
 }
 
 void stopWebServer(){
-    httpServer.stop();
+    httpServer->stop();
+	delay(1);
+	delete httpServer;
 }
 
 void webServerLoop(void) {
-    httpServer.handleClient();
+	if(httpServer != NULL)
+    	httpServer->handleClient();
 }

@@ -43,26 +43,13 @@
 #define BUTTON_MODE_DIM_DOWN        11
 
 /////Note: millis() function is not working for esp32. Below time are multipled by 10.
-#ifndef BUTTON_DEBOUNCE_DELAY
 #define BUTTON_DEBOUNCE_DELAY       50          // Debounce delay (ms)
-#endif
-
-#ifndef BUTTON_DBLCLICK_DELAY
 #define BUTTON_DBLCLICK_DELAY       500         // Time in ms to wait for a second (or third...) click
-#endif
-
-#ifndef BUTTON_LNGCLICK_DELAY
 #define BUTTON_LNGCLICK_DELAY       1000        // Time in ms holding the button down to get a long click
-#endif
-
-#ifndef BUTTON_LNGLNGCLICK_DELAY
 #define BUTTON_LNGLNGCLICK_DELAY    10000       // Time in ms holding the button down to get a long-long click
-#endif
 
-#ifndef BUTTON_MQTT_SEND_ALL_EVENTS
-#define BUTTON_MQTT_SEND_ALL_EVENTS 0           // 0 - to send only events the are bound to actions
+#define BUTTON_MQTT_SEND_ALL_EVENTS 1           // 0 - to send only events the are bound to actions
                                                 // 1 - to send all button events to MQTT
-#endif
 
 
 
