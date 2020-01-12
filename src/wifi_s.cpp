@@ -10,15 +10,13 @@ Copyright (C) 2019 by Shaeed Khan
 
 bool _wifi_wps_running = false;
 bool _wifi_smartconfig_running = false;
-uint8_t _wifi_ap_mode = WIFI_AP_FALLBACK;
 
 // -----------------------------------------------------------------------------
 // PRIVATE
 // -----------------------------------------------------------------------------
 
 void _wifiCheckAP() {
-    if ((WIFI_AP_FALLBACK == _wifi_ap_mode) &&
-        (wifiConnected()) &&
+    if (wifiConnected() &&
         ((WiFi.getMode() & WIFI_AP) > 0) &&
         (WiFi.softAPgetStationNum() == 0)
     ) {
@@ -30,14 +28,9 @@ void _wifiConfigure() {
     jw.setHostname(getSetting(K_HOSTNAME).c_str());
     jw.setSoftAP(getSetting(K_HOSTNAME).c_str(), getAdminPass().c_str());
     jw.setConnectTimeout(WIFI_CONNECT_TIMEOUT);
-    wifiReconnectCheck();
+    jw.setReconnectTimeout(WIFI_RECONNECT_INTERVAL);
     jw.enableAPFallback(WIFI_FALLBACK_APMODE);
     jw.cleanNetworks();
-
-    _wifi_ap_mode = getSetting("apmode", WIFI_AP_FALLBACK).toInt();
-
-    // Clean settings
-    _wifiClean(WIFI_MAX_NETWORKS);
 
     for (uint8_t i = 0; i < WIFI_MAX_NETWORKS; i++) {
         if (!hasSetting("ssid", i)) break;
@@ -58,7 +51,7 @@ void _wifiConfigure() {
         }
     }
 
-    jw.enableScan(getSetting("wifiScan", WIFI_SCAN_NETWORKS).toInt() == 1);
+    jw.enableScan(true);
 
 	#if defined(ARDUINO_ARCH_ESP32)
         //Do nothing
@@ -67,43 +60,6 @@ void _wifiConfigure() {
     	sleep_mode = constrain(sleep_mode, 0, 2);
     	WiFi.setSleepMode(static_cast<WiFiSleepType_t>(sleep_mode));
     #endif
-}
-
-bool _wifiClean(unsigned char num) {
-    bool changed = false;
-    int i = 0;
-
-    // Clean defined settings
-    while (i < num) {
-        // Skip on first non-defined setting
-        if (!hasSetting("ssid", i)) {
-            delSetting("ssid", i);
-            break;
-        }
-
-        // Delete empty values
-        if (!hasSetting("pass", i)) delSetting("pass", i);
-        if (!hasSetting("ip", i)) delSetting("ip", i);
-        if (!hasSetting("gw", i)) delSetting("gw", i);
-        if (!hasSetting("mask", i)) delSetting("mask", i);
-        if (!hasSetting("dns", i)) delSetting("dns", i);
-
-        ++i;
-    }
-
-    // Delete all other settings
-    while (i < WIFI_MAX_NETWORKS) {
-        changed = hasSetting("ssid", i);
-        delSetting("ssid", i);
-        delSetting("pass", i);
-        delSetting("ip", i);
-        delSetting("gw", i);
-        delSetting("mask", i);
-        delSetting("dns", i);
-        ++i;
-    }
-
-    return changed;
 }
 
 // Inject hardcoded networks
@@ -163,9 +119,6 @@ void saveWifiCredential(String ssid, String pass) {
 }
 
 void saveWifiCredential(String ssid, String pass, uint8_t index) {
-    //setSetting("ssid", index, ssid);
-    //setSetting("pass", index, pass);
-
     if(!ssid.equals(getSetting("ssid", index, ""))){
         setSetting("ssid", index, ssid);
     }
@@ -176,9 +129,7 @@ void saveWifiCredential(String ssid, String pass, uint8_t index) {
 }
 
 void _wifiDebugCallback(justwifi_messages_t code, char * parameter) {
-
     // -------------------------------------------------------------------------
-
     if (code == MESSAGE_SCANNING) {
         DEBUG_MSG_P(PSTR("[WIFI] Scanning\n"));
     }
@@ -320,19 +271,12 @@ void wifiDebug(WiFiMode_t modes) {
 // API
 // -----------------------------------------------------------------------------
 
-String getIP() {
+/*String getIP() {
     if (WiFi.getMode() == WIFI_AP) {
         return WiFi.softAPIP().toString();
     }
     return WiFi.localIP().toString();
-}
-
-String getNetwork() {
-    if (WiFi.getMode() == WIFI_AP) {
-        return jw.getAPSSID();
-    }
-    return WiFi.SSID();
-}
+}*/
 
 bool wifiConnected() {
 	#if defined(ARDUINO_ARCH_ESP32)
@@ -367,10 +311,6 @@ void wifiStartSmartConfig() {
     jw.startSmartConfig();
 }
 #endif // defined(JUSTWIFI_ENABLE_SMARTCONFIG)
-
-void wifiReconnectCheck() {
-    jw.setReconnectTimeout(WIFI_RECONNECT_INTERVAL);
-}
 
 uint8_t wifiState() {
     uint8_t state = 0;

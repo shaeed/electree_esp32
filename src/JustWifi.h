@@ -26,15 +26,19 @@ along with the JustWifi library.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <functional>
 #include <vector>
+
 #if defined(ARDUINO_ARCH_ESP32)
-#include <WiFi.h>
+    #include <WiFi.h>
+    extern "C" {
+        #include <esp_wifi.h>
+    }
 #elif defined(ARDUINO_ARCH_ESP8266)
-#include <ESP8266WiFi.h>
-extern "C" {
-    #include "user_interface.h"
-}
+    #include <ESP8266WiFi.h>
+    extern "C" {
+        #include "user_interface.h"
+    }
 #else
-#error "Non supported architecture!"
+    #error "Non supported architecture!"
 #endif
 
 
@@ -125,11 +129,8 @@ enum {
 };
 
 class JustWifi {
-
     public:
-
         typedef std::function<void(justwifi_messages_t, char *)> TMessageFunction;
-
         JustWifi();
         ~JustWifi();
 
@@ -179,14 +180,11 @@ class JustWifi {
 
         void init();
         void loop();
-
         void _events(WiFiEvent_t event);
 
     private:
-
         std::vector<network_t> _network_list;
         std::vector<TMessageFunction> _callbacks;
-
         unsigned long _connect_timeout = DEFAULT_CONNECT_TIMEOUT;
         unsigned long _reconnect_timeout = DEFAULT_RECONNECT_INTERVAL;
         unsigned long _timeout = 0;
@@ -212,7 +210,6 @@ class JustWifi {
         String _MAC2String(const unsigned char* mac);
         String _encodingString(uint8_t security);
         void _doCallback(justwifi_messages_t message, char * parameter = NULL);
-
 };
 
 extern JustWifi jw;

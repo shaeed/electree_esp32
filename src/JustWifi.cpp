@@ -22,13 +22,6 @@ along with the JustWifi library.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include "JustWifi.h"
-#include <functional>
-
-#if defined(ARDUINO_ARCH_ESP32)
-extern "C" {
-    #include <esp_wifi.h>
-}
-#endif
 
 //------------------------------------------------------------------------------
 // CONSTRUCTOR
@@ -43,7 +36,7 @@ JustWifi::JustWifi() {
     #else
         chip_id = ESP.getChipId();
     #endif
-    snprintf_P(_hostname, sizeof(_hostname), PSTR("ESP-%06X"), chip_id);
+    snprintf_P(_hostname, sizeof(_hostname), PSTR("ESP_%06X"), chip_id);
 }
 
 JustWifi::~JustWifi() {
@@ -55,30 +48,20 @@ JustWifi::~JustWifi() {
 // -----------------------------------------------------------------------------
 
 #if defined(JUSTWIFI_ENABLE_WPS)
+    #if defined(ARDUINO_ARCH_ESP8266)
+        wps_cb_status _jw_wps_status;
+        
+        void _jw_wps_status_cb(wps_cb_status status) {
+            _jw_wps_status = status;
+        }
+    #else
+        #include "esp_wps.h"
+        esp_wps_config_t _wifi_wps_config = WPS_CONFIG_INIT_DEFAULT(ESP_WPS_MODE);
+    #endif
 
-#if defined(ARDUINO_ARCH_ESP8266)
-
-#include "user_interface.h"
-
-wps_cb_status _jw_wps_status;
-
-void _jw_wps_status_cb(wps_cb_status status) {
-    _jw_wps_status = status;
-}
-
-
-#else
-
-#include "esp_wps.h"
-
-esp_wps_config_t _wifi_wps_config = WPS_CONFIG_INIT_DEFAULT(ESP_WPS_MODE);
-
-#endif
-
-void JustWifi::startWPS() {
-    _state = STATE_WPS_START;
-}
-
+    void JustWifi::startWPS() {
+        _state = STATE_WPS_START;
+    }
 #endif // defined(JUSTWIFI_ENABLE_WPS)
 
 //------------------------------------------------------------------------------
@@ -86,11 +69,9 @@ void JustWifi::startWPS() {
 //------------------------------------------------------------------------------
 
 #if defined(JUSTWIFI_ENABLE_SMARTCONFIG)
-
-void JustWifi::startSmartConfig() {
-    _state = STATE_SMARTCONFIG_START;
-}
-
+    void JustWifi::startSmartConfig() {
+        _state = STATE_SMARTCONFIG_START;
+    }
 #endif // defined(JUSTWIFI_ENABLE_SMARTCONFIG)
 
 //------------------------------------------------------------------------------
@@ -98,12 +79,10 @@ void JustWifi::startSmartConfig() {
 //------------------------------------------------------------------------------
 
 uint8_t JustWifi::_sortByRSSI() {
-
     bool first = true;
     uint8_t bestID = 0xFF;
 
     for (uint8_t i = 0; i < _network_list.size(); i++) {
-
         network_t * entry = &_network_list[i];
 
         // if no data skip
@@ -122,7 +101,6 @@ uint8_t JustWifi::_sortByRSSI() {
 
         // Walk the list
         } else {
-
             network_t * current = &_network_list[bestID];
             while (current->next != 0xFF) {
                 if (entry->rssi > _network_list[current->next].rssi) {
@@ -138,13 +116,10 @@ uint8_t JustWifi::_sortByRSSI() {
                 current->next = i;
                 entry->next = 0xFF;
             }
-
         }
-
     }
 
     return bestID;
-
 }
 
 String JustWifi::_encodingString(uint8_t security) {
@@ -165,7 +140,6 @@ String JustWifi::_encodingString(uint8_t security) {
 }
 
 uint8_t JustWifi::_populate(uint8_t networkCount) {
-
     uint8_t count = 0;
 
     // Reset RSSI to disable networks that have disappeared
@@ -182,7 +156,6 @@ uint8_t JustWifi::_populate(uint8_t networkCount) {
 
     // Populate defined networks with scan data
     for (int8_t i = 0; i < networkCount; ++i) {
-
         #if defined(ARDUINO_ARCH_ESP32)
             WiFi.getNetworkInfo(i, ssid_scan, sec_scan, rssi_scan, BSSID_scan, chan_scan);
         #else
@@ -193,11 +166,9 @@ uint8_t JustWifi::_populate(uint8_t networkCount) {
         bool known = false;
 
         for (uint8_t j = 0; j < _network_list.size(); j++) {
-
             network_t * entry = &_network_list[j];
 
             if (ssid_scan.equals(entry->ssid)) {
-
                 // Check security
                 #if defined(ARDUINO_ARCH_ESP32)
                     if ((sec_scan != WIFI_AUTH_OPEN) && (entry->pass == NULL)) continue;
@@ -219,55 +190,28 @@ uint8_t JustWifi::_populate(uint8_t networkCount) {
                 count++;
                 known = true;
                 break;
-
             }
-
         }
 
         if (_callbacks.size()) {
-
-		    char buffer[128];
-		    sprintf_P(buffer,
-		        PSTR("%s BSSID: %02X:%02X:%02X:%02X:%02X:%02X CH: %2d RSSI: %3d SEC: %s SSID: %s"),
-		        (known ? "-->" : "   "),
-		        BSSID_scan[0], BSSID_scan[1], BSSID_scan[2], BSSID_scan[3], BSSID_scan[4], BSSID_scan[5],
-		        chan_scan,
+            char buffer[128];
+            sprintf_P(buffer,
+                PSTR("%s BSSID: %02X:%02X:%02X:%02X:%02X:%02X CH: %2d RSSI: %3d SEC: %s SSID: %s"),
+                (known ? "-->" : "   "),
+                BSSID_scan[0], BSSID_scan[1], BSSID_scan[2], BSSID_scan[3], BSSID_scan[4], BSSID_scan[5],
+                chan_scan,
                 rssi_scan,
                 _encodingString(sec_scan).c_str(),
-		        ssid_scan.c_str()
-		    );
-		    _doCallback(MESSAGE_FOUND_NETWORK, buffer);
-
-		}
-
+                ssid_scan.c_str()
+            );
+            _doCallback(MESSAGE_FOUND_NETWORK, buffer);
+        }
     }
 
     return count;
-
-}
-
-void JustWifi::_esp8266_153_reset() {
-
-    #if defined(ARDUINO_ARCH_ESP8266)
-
-        // See https://github.com/esp8266/Arduino/issues/2186
-        if (strncmp_P(ESP.getSdkVersion(), PSTR("1.5.3"), 5) == 0) {
-            if ((WiFi.getMode() & WIFI_AP) > 0) {
-                WiFi.mode(WIFI_OFF);
-                delay(10);
-                WiFi.enableAP(true);
-            } else {
-                WiFi.mode(WIFI_OFF);
-            }
-
-        }
-
-    #endif
-
 }
 
 uint8_t JustWifi::_doScan() {
-
     static bool scanning = false;
 
     // If not scanning, start scan
@@ -298,7 +242,7 @@ uint8_t JustWifi::_doScan() {
 
     // Check networks
     if (0 == scanResult) {
-        WiFi.enableSTA(false);
+        //WiFi.enableSTA(false); Commented by me as JustWifi for esp8266 is not having this.
         _doCallback(MESSAGE_NO_NETWORKS);
         return RESPONSE_FAIL;
     }
@@ -310,7 +254,7 @@ uint8_t JustWifi::_doScan() {
     WiFi.scanDelete();
 
     if (0 == count) {
-        WiFi.enableSTA(false);
+        //WiFi.enableSTA(false); Commented by me as JustWifi for esp8266 is not having this.
         _doCallback(MESSAGE_NO_KNOWN_NETWORKS);
         return RESPONSE_FAIL;
     }
@@ -318,7 +262,6 @@ uint8_t JustWifi::_doScan() {
     // Sort networks by RSSI
     _currentID = _sortByRSSI();
     return RESPONSE_OK;
-
 }
 
 // -----------------------------------------------------------------------------
@@ -326,7 +269,6 @@ uint8_t JustWifi::_doScan() {
 // -----------------------------------------------------------------------------
 
 uint8_t JustWifi::_doSTA(uint8_t id) {
-
     static uint8_t networkID;
     static uint8_t state = RESPONSE_START;
     static unsigned long timeout;
@@ -342,11 +284,15 @@ uint8_t JustWifi::_doSTA(uint8_t id) {
 
     // No state or previous network failed
     if (RESPONSE_START == state) {
-
         // Init some values
         WiFi.persistent(false);
-        _esp8266_153_reset();
         WiFi.enableSTA(true);
+        
+        #if defined(ARDUINO_ARCH_ESP32) //Added by me as JustWifi for esp8266 is having this.
+            WiFi.setHostname(_hostname);
+        #else
+            WiFi.hostname(_hostname);
+        #endif
 
         // Configure static options
         if (!entry.dhcp) {
@@ -354,7 +300,7 @@ uint8_t JustWifi::_doSTA(uint8_t id) {
         }
 
         // Info callback
-		if (_callbacks.size()) {
+        if (_callbacks.size()) {
             char buffer[128];
             if (entry.scanned) {
                 snprintf_P(buffer, sizeof(buffer),
@@ -368,7 +314,7 @@ uint8_t JustWifi::_doSTA(uint8_t id) {
             } else {
                 snprintf_P(buffer, sizeof(buffer), PSTR("SSID: %s"), entry.ssid);
             }
-		    _doCallback(MESSAGE_CONNECTING, buffer);
+            _doCallback(MESSAGE_CONNECTING, buffer);
         }
 
         // Connecting
@@ -380,12 +326,10 @@ uint8_t JustWifi::_doSTA(uint8_t id) {
 
         timeout = millis();
         return (state = RESPONSE_WAIT);
-
     }
 
     // Connected?
     if (WiFi.status() == WL_CONNECTED) {
-
         // Hostname
         #if defined(ARDUINO_ARCH_ESP32)
             WiFi.setHostname(_hostname);
@@ -398,8 +342,8 @@ uint8_t JustWifi::_doSTA(uint8_t id) {
 
         WiFi.setAutoReconnect(true);
         _doCallback(MESSAGE_CONNECTED);
-        return (state = RESPONSE_OK);
 
+        return (state = RESPONSE_OK);
     }
 
     // Check timeout
@@ -420,9 +364,11 @@ uint8_t JustWifi::_doSTA(uint8_t id) {
 // -----------------------------------------------------------------------------
 
 bool JustWifi::_doAP() {
-
     // If already created recreate
-    if (_ap_connected) enableAP(false);
+    if (_ap_connected) {
+        enableAP(false);
+        delay(2);
+    }
 
     // Check if Soft AP configuration defined
     if (!_softap.ssid) {
@@ -430,7 +376,6 @@ bool JustWifi::_doAP() {
     }
 
     _doCallback(MESSAGE_ACCESSPOINT_CREATING);
-
     WiFi.enableAP(true);
 
     // Configure static options
@@ -470,45 +415,24 @@ void JustWifi::subscribe(TMessageFunction fn) {
 // -----------------------------------------------------------------------------
 
 void JustWifi::_machine() {
-
-    #if false
-        static unsigned char previous = 0xFF;
-        if (_state != previous) {
-            previous = _state;
-            Serial.printf("_state: %u, WiFi.getMode(): %u\n", _state, WiFi.getMode());
-        }
-    #endif
-
     switch(_state) {
-
-        // ---------------------------------------------------------------------
-
         case STATE_IDLE:
+            if (WiFi.status() == WL_CONNECTED)
+                return;
 
             // Should we connect in STA mode?
-            if (WiFi.status() != WL_CONNECTED) {
-
-                if (_sta_enabled) {
-                    if (_network_list.size() > 0) {
-                        if ((0 == _timeout) || ((_reconnect_timeout > 0) && (millis() - _timeout > _reconnect_timeout))) {
-                            _currentID = 0;
-                            _state = _scan ? STATE_SCAN_START : STATE_STA_START;
-                            return;
-                        }
-                    }
+            if (_sta_enabled && _network_list.size() > 0) {
+                if ((0 == _timeout) || ((_reconnect_timeout > 0) && (millis() - _timeout > _reconnect_timeout))) {
+                    _currentID = 0;
+                    _state = _scan ? STATE_SCAN_START : STATE_STA_START;
+                    return;
                 }
-
-                // Fallback
-                if (!_ap_connected & _ap_fallback_enabled) {
-                    _state = STATE_FALLBACK;
-                }
-
             }
-
-
+            // Fallback
+            if (!_ap_connected && _ap_fallback_enabled) {
+                _state = STATE_FALLBACK;
+            }
             break;
-
-        // ---------------------------------------------------------------------
 
         case STATE_SCAN_START:
             _doScan();
@@ -525,8 +449,6 @@ void JustWifi::_machine() {
                 }
             }
             break;
-
-        // ---------------------------------------------------------------------
 
         case STATE_STA_START:
             _doSTA(_currentID);
@@ -563,16 +485,10 @@ void JustWifi::_machine() {
             _state = STATE_IDLE;
             break;
 
-        // ---------------------------------------------------------------------
-
         #if defined(JUSTWIFI_ENABLE_WPS)
-
         case STATE_WPS_START:
-
             _doCallback(MESSAGE_WPS_START);
-
             #if defined(ARDUINO_ARCH_ESP8266)
-
                 _esp8266_153_reset();
 
                 if (!WiFi.enableSTA(true)) {
@@ -581,7 +497,6 @@ void JustWifi::_machine() {
                 }
 
                 WiFi.disconnect();
-
                 if (!wifi_wps_disable()) {
                     _state = STATE_WPS_FAILED;
                     return;
@@ -603,12 +518,9 @@ void JustWifi::_machine() {
                     _state = STATE_WPS_FAILED;
                     return;
                 }
-
             #else
-
                 esp_wifi_wps_enable(&_wifi_wps_config);
                 esp_wifi_wps_start(0);
-
             #endif
 
             _state = STATE_WPS_ONGOING;
@@ -636,17 +548,11 @@ void JustWifi::_machine() {
             addCurrentNetwork(true);
             _state = STATE_IDLE;
             break;
-
         #endif // defined(JUSTWIFI_ENABLE_WPS)
 
-        // ---------------------------------------------------------------------
-
         #if defined(JUSTWIFI_ENABLE_SMARTCONFIG)
-
         case STATE_SMARTCONFIG_START:
-
             _doCallback(MESSAGE_SMARTCONFIG_START);
-
             enableAP(false);
 
             if (!WiFi.beginSmartConfig()) {
@@ -656,7 +562,6 @@ void JustWifi::_machine() {
 
             _state = STATE_SMARTCONFIG_ONGOING;
             _start = millis();
-
             break;
 
         case STATE_SMARTCONFIG_ONGOING:
@@ -679,13 +584,10 @@ void JustWifi::_machine() {
             addCurrentNetwork(true);
             _state = STATE_IDLE;
             break;
-
         #endif // defined(JUSTWIFI_ENABLE_SMARTCONFIG)
 
-        // ---------------------------------------------------------------------
-
         case STATE_FALLBACK:
-            if (!_ap_connected & _ap_fallback_enabled) _doAP();
+            if (!_ap_connected && _ap_fallback_enabled) _doAP();
             _timeout = millis();
             _state = STATE_IDLE;
             break;
@@ -693,9 +595,7 @@ void JustWifi::_machine() {
         default:
             _state = STATE_IDLE;
             break;
-
     }
-
 }
 
 //------------------------------------------------------------------------------
@@ -734,6 +634,9 @@ bool JustWifi::addNetwork(
     }
 
     // Copy network SSID
+    #if defined(ARDUINO_ARCH_ESP8266)
+        if (_softap.ssid) free(_softap.ssid); //Added by me from esp8266 code
+    #endif
     new_network.ssid = strdup(ssid);
     if (!new_network.ssid) {
         return false;
@@ -741,6 +644,9 @@ bool JustWifi::addNetwork(
 
     // Copy network PASS
     if (pass && *pass != 0x00) {
+        #if defined(ARDUINO_ARCH_ESP8266)
+            if (_softap.pass) free(_softap.pass); //Added by me from esp8266 code
+        #endif
         new_network.pass = strdup(pass);
         if (!new_network.pass) {
             free(new_network.ssid);
@@ -888,9 +794,9 @@ void JustWifi::turnOff() {
     #endif
     delay(1);
 
+    _doCallback(MESSAGE_TURNING_OFF);
     _sta_enabled = false;
     _state = STATE_IDLE;
-    _doCallback(MESSAGE_TURNING_OFF);
 
 }
 
@@ -902,9 +808,13 @@ void JustWifi::turnOn() {
     delay(1);
 
     setReconnectTimeout(0);
+    _doCallback(MESSAGE_TURNING_ON);
+
+    //#if defined(ARDUINO_ARCH_ESP8266) //Added by me from esp8266 code
+        WiFi.enableSTA(true);
+    //#endif
     _sta_enabled = true;
     _state = STATE_IDLE;
-    _doCallback(MESSAGE_TURNING_ON);
 
 }
 
@@ -912,10 +822,31 @@ void JustWifi::enableSTA(bool enabled) {
     _sta_enabled = enabled;
 }
 
+/*void JustWifi::enableAP(bool enabled) {
+    if (enabled) {
+        _doAP();
+    //} else if (_ap_connected) { //Deleted the else if condition by me as esp8266 code
+    } else
+    #if defined(ARDUINO_ARCH_ESP32)
+        if (_ap_connected)
+    #endif
+    {
+        WiFi.softAPdisconnect();
+        WiFi.enableAP(false);
+        _ap_connected = false;
+        _doCallback(MESSAGE_ACCESSPOINT_DESTROYED);
+    }
+}*/
+
 void JustWifi::enableAP(bool enabled) {
     if (enabled) {
         _doAP();
-    } else if (_ap_connected) {
+    //} else if (_ap_connected) { //Deleted the else if condition by me as esp8266 code
+    } else 
+	#if defined(ARDUINO_ARCH_ESP32)
+		if (_ap_connected)
+	#endif
+	{
         WiFi.softAPdisconnect();
         WiFi.enableAP(false);
         _ap_connected = false;
