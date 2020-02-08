@@ -196,7 +196,8 @@ void _processMqtt(const char * topic, const char * msg) {
 
 void _uartmqttMQTTCallback(unsigned int type, const char * topic, const char * payload) {
     if (type == MQTT_CONNECT_EVENT) {
-        mqttSubscribe(MQTT_TOPIC_UARTOUT);
+        //Subscribing to general topics in mqtt.cpp
+        //mqttSubscribe(MQTT_TOPIC_UARTOUT);
         _sendMqttStatusToBluePill(true);
         _requestBluePillToSubscribe();
     }

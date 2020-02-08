@@ -150,8 +150,14 @@ void _mqttConfigure() {
 void _mqttCallback(unsigned int type, const char * topic, const char * payload) {
     if (type == MQTT_CONNECT_EVENT) {
         // Subscribe to internal action topics
-        mqttSubscribe(MQTT_TOPIC_ACTION);
-        mqttSubscribe(MQTT_TOPIC_CONF);
+        //mqttSubscribe(MQTT_TOPIC_ACTION);
+        //mqttSubscribe(MQTT_TOPIC_CONF);
+
+        //char topicToSub[4];
+        //snprintf_P(topicToSub, sizeof(topicToSub), PSTR("+/+"));
+        mqttSubscribe("+/+");
+        //snprintf_P(topicToSub, sizeof(topicToSub), PSTR("+"));
+        mqttSubscribe("+");
     }
 
     if (type == MQTT_MESSAGE_EVENT) {

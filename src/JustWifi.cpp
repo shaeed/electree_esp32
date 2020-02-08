@@ -388,7 +388,6 @@ bool JustWifi::_doAP() {
     } else {
         WiFi.softAP(_softap.ssid);
     }
-
     _doCallback(MESSAGE_ACCESSPOINT_CREATED);
 
     _ap_connected = true;
@@ -634,9 +633,6 @@ bool JustWifi::addNetwork(
     }
 
     // Copy network SSID
-    #if defined(ARDUINO_ARCH_ESP8266)
-        if (_softap.ssid) free(_softap.ssid); //Added by me from esp8266 code
-    #endif
     new_network.ssid = strdup(ssid);
     if (!new_network.ssid) {
         return false;
@@ -644,9 +640,6 @@ bool JustWifi::addNetwork(
 
     // Copy network PASS
     if (pass && *pass != 0x00) {
-        #if defined(ARDUINO_ARCH_ESP8266)
-            if (_softap.pass) free(_softap.pass); //Added by me from esp8266 code
-        #endif
         new_network.pass = strdup(pass);
         if (!new_network.pass) {
             free(new_network.ssid);
@@ -864,7 +857,6 @@ void JustWifi::enableScan(bool scan) {
 
 void JustWifi::_events(WiFiEvent_t event) {
     Serial.printf("[WIFI] Event %u\n", (uint8_t) event);
-    Serial.println(event);
 }
 
 void JustWifi::init() {

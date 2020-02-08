@@ -54,5 +54,6 @@ mosquitto_pub.exe -h localhost -t ELECTREE-43BF713C/strpthm/0/set -m 5  - White
 mosquitto_pub.exe -h localhost -t ELECTREE-43BF713C/strpthm/0/set -m 24  - Hue effect
 
 mosquitto_pub.exe -h localhost -t ELECTREE-43BF713C/conf/set -m "{\"lcfg\":{\"m\":2}}" – Delete All
+mosquitto_pub.exe -h localhost -t ELECTREE-43BF713C/conf/set -m "{\"lcfg\":{\"m\":1,\"g\": 33,\"leds\": 32}}"
 mosquitto_pub.exe -h localhost -t ELECTREE-43BF713C/conf/set -m "{\"lcfg\":{\"m\":1,\"g\": 33,\"leds\": 10}}"
-mosquitto_pub.exe -h localhost -t ELECTREE-43BF713C/conf/set -m "{\"lcfg\":{\"m\":1,\"g\": 32,\"leds\": 10}}"
+16 leds in wall box

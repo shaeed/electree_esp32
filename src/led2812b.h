@@ -1,6 +1,10 @@
 #ifndef LED2812B_H
 #define LED2812B_H
 
+#if defined(ARDUINO_ARCH_ESP8266)
+    #define FASTLED_ESP8266_RAW_PIN_ORDER
+#endif
+
 #include <FastLED.h>
 
 
@@ -31,9 +35,10 @@
 #define DEFAULT_THEME_CLR 0x00FF00
 
 #define THEME_FADE_MULTIPLIER 0.5
+#define THEME_RAINBOW_MULTIPLIER 2
 #define THEME_NIGHTSKY_MULTIPLIER 20
 #define THEME_RGBLOOP_MULTIPLIER 0.05
-#define THEME_THEATRE_MULTIPLIER 0.5
+#define THEME_THEATRE_MULTIPLIER 1
 #define THEME_HUEEFFECT_MULTIPLIER 0.5
 
 class Led2812b {
@@ -69,6 +74,7 @@ class Led2812b {
         void setAll(byte red, byte green, byte blue);
         //void setAll(long color);
         void applyColor(CRGB clr);
+        void rainbowEffect();
         void HueEffect();
         void simpleFade();
         void NightSky();

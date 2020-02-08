@@ -400,10 +400,13 @@ void relayMQTTCallback(unsigned int type, const char * topic, const char * paylo
     if (type == MQTT_CONNECT_EVENT) {
         // Send status on connect
         publishRelayStatus();
+        //Subscribing to general topics in mqtt.cpp
         // Subscribe to own /set topic
-        char relay_topic[strlen(MQTT_TOPIC_RELAY) + 3];
-        snprintf_P(relay_topic, sizeof(relay_topic), PSTR("%s/+"), MQTT_TOPIC_RELAY);
-        mqttSubscribe(relay_topic);
+        /*if(_relays.size() > 0){
+            char relay_topic[strlen(MQTT_TOPIC_RELAY) + 3];
+            snprintf_P(relay_topic, sizeof(relay_topic), PSTR("%s/+"), MQTT_TOPIC_RELAY);
+            mqttSubscribe(relay_topic);
+        }*/
     }
 
     if (type == MQTT_MESSAGE_EVENT) {

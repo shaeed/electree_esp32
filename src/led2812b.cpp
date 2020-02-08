@@ -25,6 +25,7 @@ void Led2812b::loop(){
 
     if(_applyClr){
         applyColor(_clr);
+        Serial.println("in apply color");
         _applyClr = false;
         FastLED.show();
     }
@@ -41,8 +42,7 @@ void Led2812b::loop(){
         break;
 
     case THEME_RAINBOW:
-        fill_rainbow(_leds, _noOfLeds, _hueInt, 5);
-        _hueInt += 50;
+        rainbowEffect();
         break;
 
     case THEME_ALLWHITE:
@@ -166,11 +166,18 @@ void Led2812b::_setupFastLed(uint16_t noOfLeds, uint8_t gpio) {
 }
 
 void Led2812b::_initVars(){
+    //applyColor(CRGB::Black);
     _brtTemp = 0;
     _showBlack = true;
     _hueInt = 0;
     if(_brt < 10)
         _brt = 10;
+
+    if(_theme == THEME_FADE){
+        _applyClr = true;
+    } else if(_theme == THEME_NIGHTSKY){
+        _clr = CRGB::White;
+    }
 }
 
 void Led2812b::setPixel(int Pixel, byte red, byte green, byte blue) {
@@ -206,6 +213,18 @@ void Led2812b::HueEffect() {
 
     _updateLeds = true;
     _delayTrue = true;
+    _waitStartMillis = millis();
+}
+
+void Led2812b::rainbowEffect(){
+    if(millis()-_waitStartMillis < _spd * THEME_RAINBOW_MULTIPLIER) {
+        return;
+    }
+
+    fill_rainbow(_leds, _noOfLeds, _hueInt, 5);
+    _hueInt += 15;
+
+    _updateLeds = true;
     _waitStartMillis = millis();
 }
 
@@ -436,6 +455,7 @@ void updateLed2812bStrip(byte stripNo, byte theme, int16_t brt, int16_t spd, lon
     if(theme > 0){
         dstrip -> _theme = theme;
         dstrip->_repeat = true;
+        dstrip->_clr = getSetting(K_LEDSTRIP_CLR, stripNo, DEFAULT_THEME_CLR).toInt();
         dstrip->_initVars();
         setSetting(K_LEDSTRIP_THM, stripNo, theme);
         DEBUG_MSG_P(PSTR("[2812B] Strip %d theme set to %d\n"), stripNo, theme);
@@ -453,12 +473,18 @@ void updateLed2812bStrip(byte stripNo, byte theme, int16_t brt, int16_t spd, lon
         DEBUG_MSG_P(PSTR("[2812B] Strip %d speed set to %d\n"), stripNo, spd);
     }
     if(clr >= 0){
-        dstrip -> _clr = clr;
-        dstrip->_repeat = true; 
-        dstrip->_applyClr = true; 
+        dstrip->_clr = clr;
+        dstrip->_repeat = true;
+        if(dstrip->_theme == THEME_NIGHTSKY){
+            dstrip->_applyClr = false;
+        } else {
+            dstrip->_applyClr = true; 
+        }
         setSetting(K_LEDSTRIP_CLR, stripNo, clr);
         DEBUG_MSG_P(PSTR("[2812B] Strip %d color set to %d\n"), stripNo, clr);
     }
+
+    
 
     publishStripStatus(stripNo);
 }
@@ -471,7 +497,7 @@ void publishStripStatus(byte stripNo){
     //Publish theme, brightness, speed, color
     mqttSend(MQTT_TOPIC_LEDSTRIP_THM, stripNo, String(dstrip->_theme).c_str());
     mqttSend(MQTT_TOPIC_LEDSTRIP_BRT, stripNo, String(dstrip->_brt).c_str());
-    mqttSend(MQTT_TOPIC_LEDSTRIP_SPEED, stripNo, String(dstrip->_spd).c_str());
+    mqttSend(MQTT_TOPIC_LEDSTRIP_SPEED, stripNo, String(100 - dstrip->_spd).c_str());
     mqttSend(MQTT_TOPIC_LEDSTRIP_CLR, stripNo, String(dstrip->_clr).c_str());
 }
 
@@ -485,17 +511,19 @@ void led2812bMQTTCallback(unsigned int type, const char * topic, const char * pa
     if (type == MQTT_CONNECT_EVENT) {
         // Send status on connect
         publishStripStatus();
-
-        // Subscribe to own /set topic
-        char relay_topic[strlen(MQTT_TOPIC_LEDSTRIP_THM) + 3];
-        snprintf_P(relay_topic, sizeof(relay_topic), PSTR("%s/+"), MQTT_TOPIC_LEDSTRIP_THM);
-        mqttSubscribe(relay_topic);
-        snprintf_P(relay_topic, sizeof(relay_topic), PSTR("%s/+"), MQTT_TOPIC_LEDSTRIP_BRT);
-        mqttSubscribe(relay_topic);
-        snprintf_P(relay_topic, sizeof(relay_topic), PSTR("%s/+"), MQTT_TOPIC_LEDSTRIP_SPEED);
-        mqttSubscribe(relay_topic);
-        snprintf_P(relay_topic, sizeof(relay_topic), PSTR("%s/+"), MQTT_TOPIC_LEDSTRIP_CLR);
-        mqttSubscribe(relay_topic);
+        //Subscribing to general topics in mqtt.cpp
+        /*if(_strips.size() > 0){
+            // Subscribe to own /set topic
+            char relay_topic[strlen(MQTT_TOPIC_LEDSTRIP_THM) + 3];
+            snprintf_P(relay_topic, sizeof(relay_topic), PSTR("%s/+"), MQTT_TOPIC_LEDSTRIP_THM);
+            mqttSubscribe(relay_topic);
+            snprintf_P(relay_topic, sizeof(relay_topic), PSTR("%s/+"), MQTT_TOPIC_LEDSTRIP_BRT);
+            mqttSubscribe(relay_topic);
+            snprintf_P(relay_topic, sizeof(relay_topic), PSTR("%s/+"), MQTT_TOPIC_LEDSTRIP_SPEED);
+            mqttSubscribe(relay_topic);
+            snprintf_P(relay_topic, sizeof(relay_topic), PSTR("%s/+"), MQTT_TOPIC_LEDSTRIP_CLR);
+            mqttSubscribe(relay_topic);
+        }  */ 
     }
 
     if (type == MQTT_MESSAGE_EVENT) {
@@ -517,13 +545,12 @@ void led2812bMQTTCallback(unsigned int type, const char * topic, const char * pa
         } else if (t.startsWith(MQTT_TOPIC_LEDSTRIP_SPEED)) {
             byte id = t.substring(strlen(MQTT_TOPIC_LEDSTRIP_SPEED)+1).toInt();
             int val = atoi(payload);
+            val = 100 - val;
             updateLed2812bStrip(id, 0, -1, val, -1);
 
         } else if (t.startsWith(MQTT_TOPIC_LEDSTRIP_CLR)) {
-            Serial.println("Color");
             byte id = t.substring(strlen(MQTT_TOPIC_LEDSTRIP_CLR)+1).toInt();
             long val = atoi(payload);
-            Serial.println(val);
             updateLed2812bStrip(id, 0, -1, -1, val);
 
         }
